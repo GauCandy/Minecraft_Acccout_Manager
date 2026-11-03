@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -5,6 +7,8 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace MinecraftSessionTool;
 
@@ -17,22 +21,33 @@ internal sealed record SessionResult(string Username, string Uuid, string Access
 internal static class SessionService
 {
     internal static async Task<SessionResult> CreateAsync(string cookieFile,
-        IProgress<string> progress, CancellationToken cancellationToken)
+        IProgress<string> progress, CancellationToken cancellationToken, string? proxyAddress = null)
     {
         progress.Report("Đọc file cookie");
-        var jar = ParseNetscapeCookies(cookieFile);
+        string text = await File.ReadAllTextAsync(cookieFile, cancellationToken);
+        return await CreateFromTextAsync(text, progress, cancellationToken, proxyAddress);
+    }
+
+    internal static async Task<SessionResult> CreateFromTextAsync(string cookieText,
+        IProgress<string> progress, CancellationToken cancellationToken, string? proxyAddress = null)
+    {
+        var jar = ParseCookiesFromText(cookieText);
         if (jar.Count == 0)
-            throw new InvalidDataException("File chưa có cookie đăng nhập Microsoft hợp lệ. Hãy chọn file Netscape khác nhé.");
+            throw new InvalidDataException("Dữ liệu chưa có cookie đăng nhập Microsoft hợp lệ (hỗ trợ cả định dạng Netscape .txt và JSON .json). Hãy kiểm tra lại file cookie nhé.");
 
         cancellationToken.ThrowIfCancellationRequested();
+        if (!string.IsNullOrEmpty(proxyAddress))
+        {
+            progress.Report($"Định tuyến qua Proxy: {proxyAddress}");
+        }
         progress.Report("Kết nối Microsoft OAuth");
-        var callback = await ResolveSisuOAuthAsync(jar, cancellationToken);
+        var callback = await ResolveSisuOAuthAsync(jar, cancellationToken, proxyAddress);
         progress.Report("Xác nhận phiên Xbox");
         var (userHash, xstsToken) = ExtractXstsBundle(callback);
         progress.Report("Lấy phiên Minecraft Java");
-        var accessToken = await ExchangeMinecraftTokenAsync(userHash, xstsToken, cancellationToken);
+        var accessToken = await ExchangeMinecraftTokenAsync(userHash, xstsToken, cancellationToken, proxyAddress);
         progress.Report("Đọc hồ sơ người chơi");
-        var (username, uuid) = await GetMinecraftProfileAsync(accessToken, cancellationToken);
+        var (username, uuid) = await GetMinecraftProfileAsync(accessToken, cancellationToken, proxyAddress);
         cancellationToken.ThrowIfCancellationRequested();
 
         return new SessionResult(username, uuid, accessToken);
@@ -45,10 +60,68 @@ internal static class SessionService
         "account.xbox.com", "sisu.xboxlive.com", "xboxlive.com"
     };
 
-    private static CookieContainer ParseNetscapeCookies(string path)
+    public static CookieContainer ParseNetscapeCookiesFromText(string text) => ParseCookiesFromText(text);
+
+    public static CookieContainer ParseCookiesFromText(string text)
     {
         var container = new CookieContainer();
-        foreach (var line in File.ReadLines(path))
+        if (string.IsNullOrWhiteSpace(text)) return container;
+
+        string trimmed = text.Trim();
+
+        // 1. Hỗ trợ định dạng JSON (Cookie-Editor, EditThisCookie, Puppeteer, v.v.)
+        if (trimmed.StartsWith("[") || trimmed.StartsWith("{"))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(trimmed);
+                var root = doc.RootElement;
+
+                var cookieList = new List<JsonElement>();
+                if (root.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var el in root.EnumerateArray()) cookieList.Add(el);
+                }
+                else if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("cookies", out var arr) && arr.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var el in arr.EnumerateArray()) cookieList.Add(el);
+                }
+
+                foreach (var el in cookieList)
+                {
+                    if (el.ValueKind != JsonValueKind.Object) continue;
+
+                    string name = "";
+                    string value = "";
+                    string domain = "";
+
+                    if (el.TryGetProperty("name", out var nProp)) name = nProp.GetString() ?? "";
+                    if (el.TryGetProperty("value", out var vProp)) value = vProp.GetString() ?? "";
+                    if (el.TryGetProperty("domain", out var dProp)) domain = dProp.GetString() ?? "";
+
+                    domain = domain.TrimStart('.');
+                    if (AuthDomains.Contains(domain) && !string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(value))
+                    {
+                        try
+                        {
+                            container.Add(new Cookie(name, value, "/", "." + domain));
+                        }
+                        catch { }
+                    }
+                }
+
+                if (container.Count > 0) return container;
+            }
+            catch
+            {
+                // Nếu JSON parse lỗi, tiếp tục thử parse dạng Netscape
+            }
+        }
+
+        // 2. Định dạng Netscape chuẩn tab-separated (cookies.txt)
+        using var reader = new StringReader(text);
+        string? line;
+        while ((line = reader.ReadLine()) != null)
         {
             string clean = line.Trim();
             if (string.IsNullOrEmpty(clean)) continue;
@@ -74,7 +147,7 @@ internal static class SessionService
         return container;
     }
 
-    private static async Task<string> ResolveSisuOAuthAsync(CookieContainer jar, CancellationToken cancellationToken)
+    private static async Task<string> ResolveSisuOAuthAsync(CookieContainer jar, CancellationToken cancellationToken, string? proxyAddress = null)
     {
         var handler = new SocketsHttpHandler
         {
@@ -82,6 +155,16 @@ internal static class SessionService
             AllowAutoRedirect = false,
             MaxResponseHeadersLength = 128 * 1024
         };
+
+        if (!string.IsNullOrEmpty(proxyAddress))
+        {
+            var webProxy = ProxyStore.CreateWebProxy(proxyAddress);
+            if (webProxy != null)
+            {
+                handler.Proxy = webProxy;
+                handler.UseProxy = true;
+            }
+        }
 
         using var client = new HttpClient(handler);
         client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36");
@@ -119,7 +202,6 @@ internal static class SessionService
             var kv = pair.Split('=');
             if (kv.Length >= 2 && kv[0] == "accessToken")
             {
-                // Thay dấu + trước khi unescape tương tự node: replace(/\+/g, '%2B')
                 string safeValue = kv[1].Replace("+", "%2B");
                 encoded = Uri.UnescapeDataString(safeValue);
                 break;
@@ -128,7 +210,6 @@ internal static class SessionService
 
         if (string.IsNullOrEmpty(encoded)) throw new Exception("Không tìm thấy accessToken trong URL callback.");
 
-        // Fix padding base64 nếu thiếu
         int pad = (4 - encoded.Length % 4) % 4;
         if (pad > 0 && pad < 4) encoded += new string('=', pad);
 
@@ -149,9 +230,19 @@ internal static class SessionService
         throw new Exception("Gói đăng nhập không chứa dịch vụ Minecraft.");
     }
 
-    private static async Task<string> ExchangeMinecraftTokenAsync(string userHash, string xstsToken, CancellationToken cancellationToken)
+    private static async Task<string> ExchangeMinecraftTokenAsync(string userHash, string xstsToken, CancellationToken cancellationToken, string? proxyAddress = null)
     {
-        using var client = new HttpClient();
+        SocketsHttpHandler? handler = null;
+        if (!string.IsNullOrEmpty(proxyAddress))
+        {
+            var webProxy = ProxyStore.CreateWebProxy(proxyAddress);
+            if (webProxy != null)
+            {
+                handler = new SocketsHttpHandler { Proxy = webProxy, UseProxy = true };
+            }
+        }
+
+        using var client = handler != null ? new HttpClient(handler) : new HttpClient();
         var payload = JsonSerializer.Serialize(new
         {
             identityToken = $"XBL3.0 x={userHash};{xstsToken}"
@@ -165,13 +256,23 @@ internal static class SessionService
             throw new Exception($"Đổi token Minecraft thất bại: HTTP {res.StatusCode}");
         }
 
-        using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+        using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync(cancellationToken));
         return doc.RootElement.GetProperty("access_token").GetString()!;
     }
 
-    private static async Task<(string ign, string uuid)> GetMinecraftProfileAsync(string accessToken, CancellationToken cancellationToken)
+    private static async Task<(string ign, string uuid)> GetMinecraftProfileAsync(string accessToken, CancellationToken cancellationToken, string? proxyAddress = null)
     {
-        using var client = new HttpClient();
+        SocketsHttpHandler? handler = null;
+        if (!string.IsNullOrEmpty(proxyAddress))
+        {
+            var webProxy = ProxyStore.CreateWebProxy(proxyAddress);
+            if (webProxy != null)
+            {
+                handler = new SocketsHttpHandler { Proxy = webProxy, UseProxy = true };
+            }
+        }
+
+        using var client = handler != null ? new HttpClient(handler) : new HttpClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
         using var res = await client.GetAsync("https://api.minecraftservices.com/minecraft/profile", cancellationToken);
@@ -180,12 +281,9 @@ internal static class SessionService
             throw new Exception("Tài khoản Microsoft này chưa sở hữu bản quyền Minecraft Java.");
         }
 
-        using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+        using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync(cancellationToken));
         string ign = doc.RootElement.GetProperty("name").GetString()!;
         string uuid = doc.RootElement.GetProperty("id").GetString()!;
         return (ign, uuid);
     }
-
-
 }
-

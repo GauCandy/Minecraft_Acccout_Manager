@@ -1,233 +1,685 @@
-<Window x:Class="MinecraftSessionTool.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
-        Title="Minecraft Session Tool · Session Garden" Width="1160" Height="840"
-        MinWidth="920" MinHeight="640" WindowStartupLocation="CenterScreen"
-        Background="#FBF9FE" Foreground="#3C354C" FontFamily="Segoe UI" FontSize="13"
-        Icon="Assets/app.ico" UseLayoutRounding="True" SnapsToDevicePixels="True"
-        Closing="Window_Closing">
-    <shell:WindowChrome.WindowChrome>
-        <shell:WindowChrome CaptionHeight="42" ResizeBorderThickness="6" CornerRadius="12" GlassFrameThickness="0" />
-    </shell:WindowChrome.WindowChrome>
-    <Window.Resources>
-        <SolidColorBrush x:Key="Ink" Color="#3C354C" />
-        <SolidColorBrush x:Key="Muted" Color="#81768F" />
-        <SolidColorBrush x:Key="Accent" Color="#8162B4" />
-        <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap" /></Style>
-        <Style x:Key="SmallLabel" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource Muted}" />
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
-        <Style TargetType="Button">
-            <Setter Property="Background" Value="#F1EBF8" />
-            <Setter Property="Foreground" Value="#72559E" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="16,10" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="HorizontalContentAlignment" Value="Center" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="ButtonSurface" Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="11" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" RecognizesAccessKey="True" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ButtonSurface" Property="Opacity" Value="0.82" /></Trigger>
-                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="ButtonSurface" Property="Opacity" Value="0.65" /></Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="ButtonSurface" Property="BorderBrush" Value="#A58ACB" /></Trigger>
-                            <Trigger Property="IsEnabled" Value="False"><Setter TargetName="ButtonSurface" Property="Opacity" Value="0.42" /><Setter Property="Cursor" Value="Arrow" /></Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style x:Key="Card" TargetType="Border">
-            <Setter Property="Background" Value="White" />
-            <Setter Property="BorderBrush" Value="#EEE8F3" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="20" />
-            <Setter Property="Padding" Value="20" />
-        </Style>
-        <Style x:Key="ValueField" TargetType="TextBox">
-            <Setter Property="Background" Value="#F8F6FB" />
-            <Setter Property="Foreground" Value="#51455F" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="11,10" />
-            <Setter Property="IsReadOnly" Value="True" />
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Setter Property="Template"><Setter.Value>
-                <ControlTemplate TargetType="TextBox">
-                    <Border Background="{TemplateBinding Background}" CornerRadius="9">
-                        <ScrollViewer x:Name="PART_ContentHost" />
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value></Setter>
-        </Style>
-    </Window.Resources>
-    <Grid Background="#FBF9FE" SizeChanged="LayoutRoot_SizeChanged">
-        <Grid.RowDefinitions><RowDefinition Height="42" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-        <Border Background="#F4EEF9" BorderBrush="#EDE6F3" BorderThickness="0,0,0,1">
-            <Grid Margin="20,0,6,0">
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="15" Height="15" CornerRadius="4" Background="#C0D9AE" Margin="0,0,9,0">
-                        <TextBlock Text="✦" FontSize="10" Foreground="#56805D" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                    <TextBlock Text="Minecraft Session Tool" FontSize="12" FontWeight="SemiBold" Foreground="#796A8C" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" shell:WindowChrome.IsHitTestVisibleInChrome="True">
-                    <Button Content="&#xE921;" FontFamily="Segoe MDL2 Assets" FontSize="10" Width="40" Background="Transparent" Padding="0" Click="Minimize_Click" AutomationProperties.Name="Thu nhỏ" ToolTip="Thu nhỏ" />
-                    <Button Content="&#xE922;" FontFamily="Segoe MDL2 Assets" FontSize="10" Width="40" Background="Transparent" Padding="0" Click="Maximize_Click" AutomationProperties.Name="Phóng to hoặc khôi phục" ToolTip="Phóng to / khôi phục" />
-                    <Button Content="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="11" Width="40" Background="Transparent" Padding="0" Click="Close_Click" AutomationProperties.Name="Đóng" ToolTip="Đóng" />
-                </StackPanel>
-            </Grid>
-        </Border>
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="218" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-            <Border Background="#F4EEF9" BorderBrush="#EDE6F3" BorderThickness="0,0,1,0">
-                <Grid Margin="22,25,22,20">
-                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                    <StackPanel>
-                        <TextBlock Text="session" FontSize="28" FontWeight="Bold" Foreground="#6A5489" />
-                        <StackPanel Orientation="Horizontal" Margin="0,-3,0,0">
-                            <TextBlock Text="garden" FontSize="28" FontWeight="Light" Foreground="#8F78AD" />
-                            <TextBlock Text="✿" FontSize="24" Foreground="#D9A0B8" Margin="8,3,0,0" />
-                        </StackPanel>
-                        <TextBlock Text="a little place to start" FontSize="11" Foreground="#9A89AD" Margin="1,8,0,25" />
-                        <Border CornerRadius="11" Background="#E6DAF2" Padding="13,12">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" Foreground="#8162B4" VerticalAlignment="Center" Margin="0,0,10,0" />
-                                <TextBlock Text="Phiên đăng nhập" Foreground="#70538F" FontWeight="SemiBold" FontSize="12" />
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                    <StackPanel Grid.Row="1" Margin="0,22,0,0">
-                        <Border Width="144" Height="144" CornerRadius="24" Background="#E6DAF2" Padding="5" Margin="0,8,0,12">
-    <Border CornerRadius="20" ClipToBounds="True">
-        <Border.Background><ImageBrush ImageSource="Assets/github-avatar.png" Stretch="UniformToFill" /></Border.Background>
-    </Border>
-</Border>
-<Button Content="GauCandy  ↗" Click="GitHubCredit_Click" Background="Transparent" Foreground="#70538F" FontSize="14" Padding="8,4" ToolTip="github.com/GauCandy" />
-<TextBlock Text="MADE BY · GITHUB" FontSize="9" Foreground="#A08CAF" TextAlignment="Center" Margin="0,2,0,12" />
-                        <TextBlock Text="Chào bạn, nhà thám hiểm!" TextAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="#857295" />
-                    </StackPanel>
-                    <Border x:Name="QuickGuide" Grid.Row="2" VerticalAlignment="Bottom" Background="#FAF6FC" CornerRadius="14" Padding="14" Margin="0,24,0,18">
-                        <StackPanel>
-                            <TextBlock Text="MỘT CHÚT HƯỚNG DẪN" FontSize="9" FontWeight="Bold" Foreground="#A08CAF" Margin="0,0,0,12" />
-                            <TextBlock Text="1. Chọn file cookie của bạn" FontSize="11" Foreground="#84748F" Margin="0,0,0,9" />
-                            <TextBlock Text="2. Tự động tạo phiên Minecraft" FontSize="11" Foreground="#84748F" Margin="0,0,0,9" />
-                            <TextBlock Text="3. Sao chép và bắt đầu chơi" FontSize="11" Foreground="#84748F" />
-                        </StackPanel>
-                    </Border>
-                    <StackPanel Grid.Row="3">
-                        <Border x:Name="UpdateBadge" Background="#FFF1E5" BorderBrush="#F5A866" BorderThickness="1" CornerRadius="12" Padding="10,6" Margin="0,5,0,0" Visibility="Collapsed" Cursor="Hand" MouseLeftButtonUp="UpdateBadge_Click" ToolTip="Nhấp để mở trang tải phiên bản mới">
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <TextBlock Text="●" Foreground="#E67E22" FontSize="10" VerticalAlignment="Center" Margin="0,0,6,0" />
-                                <TextBlock x:Name="UpdateBadgeText" Text="Có phiên bản mới!" FontSize="11" FontWeight="Bold" Foreground="#D35400" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </Border>
-                        <TextBlock x:Name="AppVersionText" Text="JAVA EDITION  ·  v1.0.0" FontSize="9" Foreground="#A795B6" TextAlignment="Center" Margin="0,15,0,0" />
-                    </StackPanel>
-                </Grid>
+<Window x:Class="MinecraftSessionTool.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework" Title="Minecraft Cookie Manager" Width="1160" Height="780" MinWidth="640" MinHeight="520" WindowStartupLocation="CenterScreen" Background="#FAF8FC" Foreground="#332A42" FontFamily="Segoe UI" FontSize="13" Icon="Assets/app.ico" UseLayoutRounding="True" SnapsToDevicePixels="True" Closing="Window_Closing" AllowDrop="True" DragOver="Window_DragOver" DragLeave="Window_DragLeave" Drop="Window_Drop" PreviewKeyDown="Window_PreviewKeyDown">
+  <shell:WindowChrome.WindowChrome>
+    <shell:WindowChrome CaptionHeight="42" ResizeBorderThickness="6" CornerRadius="12" GlassFrameThickness="0" />
+  </shell:WindowChrome.WindowChrome>
+  <Window.Resources>
+    <SolidColorBrush x:Key="Ink" Color="#332A42" />
+    <SolidColorBrush x:Key="Muted" Color="#8C7D9E" />
+    <SolidColorBrush x:Key="Accent" Color="#7C5CB7" />
+    <SolidColorBrush x:Key="AccentBg" Color="#F0E8F8" />
+    <SolidColorBrush x:Key="BorderColor" Color="#EAE0F2" />
+    <Style TargetType="TextBlock">
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style x:Key="SectionHeader" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground" Value="#9584A8" />
+      <Setter Property="Margin" Value="0,0,0,5" />
+    </Style>
+    <Style TargetType="Button">
+      <Setter Property="Background" Value="#F1EBF8" />
+      <Setter Property="Foreground" Value="#6F4FA6" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="13,7" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="BtnBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" RecognizesAccessKey="True" />
             </Border>
-            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="28,20,28,16">
-                <StackPanel>
-                    <Grid Margin="0,0,0,18">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Text="LET'S PLAY SOMETHING LOVELY" FontSize="10" FontWeight="Bold" Foreground="#AC93BD" Margin="0,0,0,7" />
-                            <TextBlock Text="Một phiên mới, một hành trình mới." FontSize="25" FontWeight="SemiBold" Foreground="#4A3D5B" />
-                            <TextBlock Text="Chuẩn bị phiên Minecraft của bạn trong một góc nhỏ thật dễ thương." FontSize="12" Foreground="{StaticResource Muted}" Margin="0,8,15,0" />
-                        </StackPanel>
-                        <Border x:Name="StatusBadge" Grid.Column="1" VerticalAlignment="Top" CornerRadius="13" Background="#EDF4E8" Padding="12,7" Margin="15,20,0,0">
-                            <StackPanel Orientation="Horizontal"><Ellipse x:Name="StatusDot" Width="6" Height="6" Fill="#83A574" Margin="0,0,7,0" /><TextBlock x:Name="StatusText" Text="Sẵn sàng" FontSize="11" Foreground="#6E8A61" /></StackPanel>
-                        </Border>
-                    </Grid>
-                    <Border Style="{StaticResource Card}" Margin="0,0,0,18">
-                        <StackPanel>
-                            <Grid Margin="0,0,0,13">
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                <Border Background="#F3ECFA" CornerRadius="10" Width="34" Height="34" Margin="0,0,11,0"><TextBlock Text="01" Foreground="#9A7CB9" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
-                                <StackPanel Grid.Column="1"><TextBlock Text="Chọn file cookie" FontSize="16" FontWeight="SemiBold" /><TextBlock Text="File Netscape từ tài khoản của bạn" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,3,0,0" /></StackPanel>
-                                <Border Grid.Column="2" Background="#FCF2F6" CornerRadius="7" Padding="9,5" VerticalAlignment="Center"><TextBlock Text=".TXT" Foreground="#BB819A" FontSize="10" FontWeight="Bold" /></Border>
-                            </Grid>
-                            <Grid x:Name="DropZone" AllowDrop="True" DragOver="DropZone_DragOver" DragLeave="DropZone_DragLeave" Drop="DropZone_Drop" MinHeight="96" Margin="0,0,0,12" Background="Transparent" AutomationProperties.Name="Kéo thả file cookie vào đây">
-                                <Rectangle x:Name="DropOutline" Fill="#FCFAFE" Stroke="#DCCCEB" StrokeThickness="1.5" StrokeDashArray="4,4" RadiusX="14" RadiusY="14" />
-                                <Grid Margin="20,14">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                    <Border Width="49" Height="54" CornerRadius="12" Background="#F0E6F7" VerticalAlignment="Center" Margin="0,0,15,0"><TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="24" Foreground="#AA8AC3" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
-                                        <TextBlock x:Name="FileNameText" Text="Thả file cookie vào đây nhé" FontSize="13" FontWeight="SemiBold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
-                                        <TextBlock x:Name="FileHintText" Text="hoặc chọn một file từ máy tính" Foreground="#9B8BA8" FontSize="11" Margin="0,7,0,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
-                                    </StackPanel>
-                                    <Button x:Name="ChooseButton" Grid.Column="2" Content="Chọn file" Click="ChooseFile_Click" VerticalAlignment="Center" Padding="15,10" FontSize="12" />
-                                </Grid>
-                            </Grid>
-                            <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                <Button x:Name="CancelButton" Grid.Column="1" Content="Hủy" Visibility="Collapsed" Margin="10,0,0,0" Click="Cancel_Click" />
-                            </Grid>
-                            <ProgressBar x:Name="WorkProgress" Height="3" Margin="3,13,3,0" Foreground="#B296CE" Background="#F1EBF8" BorderThickness="0" Visibility="Collapsed" />
-                        </StackPanel>
-                    </Border>
-                    <Grid Margin="0,0,0,18">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="16" /><ColumnDefinition Width="0.85*" /></Grid.ColumnDefinitions>
-                        <Border Style="{StaticResource Card}">
-                            <StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                    <Border Width="28" Height="28" Background="#EEF5E9" CornerRadius="9" Margin="0,0,9,0"><TextBlock Text="✿" Foreground="#91AC7C" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
-                                    <TextBlock Text="Phiên của bạn" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                </StackPanel>
-                                <TextBlock Text="TÊN NGƯỜI CHƠI" Style="{StaticResource SmallLabel}" Margin="0,0,0,5" />
-                                <TextBox x:Name="UsernameField" Text="Chưa có người chơi" Style="{StaticResource ValueField}" AutomationProperties.Name="Tên người chơi" />
-                                <TextBlock Text="UUID" Style="{StaticResource SmallLabel}" Margin="0,13,0,5" />
-                                <TextBox x:Name="UuidField" Text="Sẽ xuất hiện khi tạo phiên" Style="{StaticResource ValueField}" FontSize="10" AutomationProperties.Name="UUID người chơi" />
-                                <Grid Margin="0,13,0,5"><TextBlock Text="ACCESS TOKEN" Style="{StaticResource SmallLabel}" /><CheckBox x:Name="RevealToken" Content="Hiện" HorizontalAlignment="Right" FontSize="11" Foreground="#9B84B1" IsEnabled="False" Checked="RevealToken_Changed" Unchecked="RevealToken_Changed" /></Grid>
-                                <Grid Height="38">
-                                    <Border Background="#F8F6FB" CornerRadius="9" />
-                                    <TextBlock x:Name="TokenPlaceholder" Text="Phiên đăng nhập chưa được tạo" Foreground="#9B8BA8" FontSize="11" VerticalAlignment="Center" Margin="11,0" />
-                                    <PasswordBox x:Name="TokenPassword" Background="Transparent" BorderThickness="0" Padding="11,10" Foreground="#72578E" FontSize="12" Visibility="Collapsed" IsHitTestVisible="False" Focusable="False" />
-                                    <TextBox x:Name="TokenField" Style="{StaticResource ValueField}" Visibility="Collapsed" FontSize="11" AutomationProperties.Name="Access token" />
-                                </Grid>
-                                <UniformGrid Columns="2" Margin="0,15,0,0">
-                                    <Button x:Name="CopyTokenButton" Content="Sao chép token" FontSize="11" Padding="8,10" Margin="0,0,5,0" IsEnabled="False" Click="CopyToken_Click" />
-                                    <Button x:Name="CopyArgsButton" Content="Chép lệnh chạy" FontSize="11" Padding="8,10" Margin="5,0,0,0" IsEnabled="False" Click="CopyArgs_Click" ToolTip="Sao chép tham số khởi chạy Minecraft" />
-                                </UniformGrid>
-                            </StackPanel>
-                        </Border>
-                        <Border Grid.Column="2" Style="{StaticResource Card}" Background="#FFFCFD" Padding="20">
-                            <StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,2,0,13"><TextBlock Text="✧" FontSize="22" Foreground="#CCA2B7" Margin="0,0,8,0" /><TextBlock Text="Nhật ký nhỏ" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" /></StackPanel>
-                                <ScrollViewer x:Name="LogScroll" VerticalScrollBarVisibility="Auto" Height="185" HorizontalScrollBarVisibility="Disabled">
-                                    <StackPanel x:Name="LogEntries" />
-                                </ScrollViewer>
-                                <Border BorderBrush="#F0E5EB" BorderThickness="0,1,0,0" Padding="0,11,0,0" Margin="0,13,0,0"><TextBlock x:Name="LogFooter" Text="Mọi hành trình đều bắt đầu từ đây." Foreground="#AA95A6" FontSize="10" /></Border>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-                    <Border x:Name="NoticeBorder" Background="#F2EDF8" CornerRadius="11" Padding="14,11">
-                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                            <TextBlock x:Name="NoticeIcon" Text="♡" FontSize="17" Foreground="#A38ABB" Margin="0,0,10,0" VerticalAlignment="Center" />
-                            <TextBlock x:Name="NoticeText" Grid.Column="1" Text="Chọn hoặc thả file để tự động tạo phiên. Kết quả hiển thị ngay trong ứng dụng để bạn sao chép." Foreground="#8C799F" FontSize="11" VerticalAlignment="Center" />
-                        </Grid>
-                    </Border>
-
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="BtnBorder" Property="Opacity" Value="0.82" />
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="BtnBorder" Property="Opacity" Value="0.65" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="BtnBorder" Property="Opacity" Value="0.38" />
+                <Setter Property="Cursor" Value="Arrow" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <!-- Primary Button -->
+    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Background" Value="#7C5CB7" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
+    </Style>
+    <!-- Danger Button -->
+    <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Background" Value="#FDF0F0" />
+      <Setter Property="Foreground" Value="#C0392B" />
+    </Style>
+    <!-- Modern Card -->
+    <Style x:Key="ModernCard" TargetType="Border">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="BorderBrush" Value="#EAE0F2" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="Padding" Value="16" />
+    </Style>
+    <!-- Readonly TextBox -->
+    <Style x:Key="ReadOnlyField" TargetType="TextBox">
+      <Setter Property="Background" Value="#F9F7FC" />
+      <Setter Property="Foreground" Value="#3F3452" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="11,8" />
+      <Setter Property="IsReadOnly" Value="True" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontFamily" Value="Segoe UI, Consolas" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="TextBox">
+            <Border Background="{TemplateBinding Background}" CornerRadius="8" BorderBrush="#EAE2F2" BorderThickness="1">
+              <ScrollViewer x:Name="PART_ContentHost" />
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </Window.Resources>
+  <Grid Background="#FAF8FC" x:Name="LayoutRoot" SizeChanged="LayoutRoot_SizeChanged">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="42" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+    <!-- Window Title Bar -->
+    <Border Background="#F4EEF9" BorderBrush="#EAE0F2" BorderThickness="0,0,0,1">
+      <Grid Margin="16,0,6,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <!-- Brand Name in Titlebar -->
+        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+          <Image Source="Assets/cookie.png" Width="20" Height="20" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="NearestNeighbor" />
+          <TextBlock Text="Minecraft Cookie Manager" FontSize="12" FontWeight="SemiBold" Foreground="#5E4B7A" VerticalAlignment="Center" />
+          <Border Background="#E6DBF2" CornerRadius="5" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center" x:Name="VersionEggTarget" MouseLeftButtonDown="VersionEgg_Click" shell:WindowChrome.IsHitTestVisibleInChrome="True">
+            <TextBlock Text="v1.0.1" FontSize="9" FontWeight="Bold" Foreground="#7756A8" x:Name="TitleVersionText" />
+          </Border>
+          <!-- Update Badge -->
+        </StackPanel>
+        <!-- Window Control Buttons -->
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" shell:WindowChrome.IsHitTestVisibleInChrome="True">
+          <Button Content="" FontFamily="Segoe MDL2 Assets" FontSize="10" Width="36" Height="28" Background="Transparent" Padding="0" Click="Minimize_Click" ToolTip="Thu nhỏ" />
+          <Button Content="" FontFamily="Segoe MDL2 Assets" FontSize="10" Width="36" Height="28" Background="Transparent" Padding="0" Click="Maximize_Click" ToolTip="Phóng to / Khôi phục" />
+          <Button Content="" FontFamily="Segoe MDL2 Assets" FontSize="11" Width="36" Height="28" Background="Transparent" Padding="0" Click="Close_Click" ToolTip="Đóng" />
+        </StackPanel>
+        <Button xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework" x:Name="UpdateBadge" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="10,0,12,0" Padding="12,6" Background="#FFF0DA" Foreground="#B66D25" BorderBrush="#EAC18E" BorderThickness="1" Visibility="Collapsed" Click="UpdateBadge_Click" shell:WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Xem và cài đặt phiên bản mới">
+          <StackPanel Orientation="Horizontal">
+            <TextBlock Text="↑" FontSize="15" FontWeight="Bold" Margin="0,0,7,0" />
+            <TextBlock x:Name="UpdateBadgeText" Text="Có bản mới" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </Grid>
+    </Border>
+    <!-- Main Workspace (Category Sidebar + Active Category Content) -->
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="200" x:Name="SidebarColumn" />
+        <ColumnDefinition Width="*" />
+      </Grid.ColumnDefinitions>
+      <!-- CỘT DANH MỤC (CATEGORY SIDEBAR) -->
+      <Border Background="#F4EEF8" BorderBrush="#EAE0F2" BorderThickness="0,0,1,0">
+        <Grid Margin="12,14,12,12">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+          <!-- Danh Mục Section -->
+          <StackPanel Grid.Row="0">
+            <TextBlock Text="DANH MỤC" FontSize="10" FontWeight="Bold" Foreground="#9C8BAC" Margin="6,0,0,10" />
+            <!-- Category Item 1: Cookie -->
+            <Border x:Name="NavCookieBtn" Background="#EDE2F6" BorderBrush="#C9B3E4" BorderThickness="1" CornerRadius="10" Padding="12,10" Margin="0,0,0,6" Cursor="Hand" MouseLeftButtonDown="NavCookie_Click">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="🍪" FontSize="15" Margin="0,0,10,0" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="Cookie" FontSize="13" FontWeight="Bold" Foreground="#5E3D8E" VerticalAlignment="Center" />
+                <Border Grid.Column="2" Background="#DFCEF2" CornerRadius="8" Padding="6,1" VerticalAlignment="Center">
+                  <TextBlock x:Name="CategoryCookieCount" Text="0" FontSize="10" FontWeight="Bold" Foreground="#6C4CA7" />
+                </Border>
+              </Grid>
+            </Border>
+            <!-- Category Item 2: Proxy -->
+            <Border x:Name="NavProxyBtn" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="10" Padding="12,10" Margin="0,0,0,6" Cursor="Hand" MouseLeftButtonDown="NavProxy_Click">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="🌐" FontSize="15" Margin="0,0,10,0" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="Proxy" FontSize="13" FontWeight="SemiBold" Foreground="#7D6B92" VerticalAlignment="Center" />
+                <Border Grid.Column="2" Background="#EBE2F2" CornerRadius="8" Padding="6,1" VerticalAlignment="Center">
+                  <TextBlock x:Name="CategoryProxyCount" Text="0" FontSize="10" FontWeight="Bold" Foreground="#85719B" />
+                </Border>
+              </Grid>
+            </Border>
+            <Border xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="NavLogsBtn" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="10" Padding="12,10" Margin="0,0,0,6" Cursor="Hand" MouseLeftButtonDown="NavLogs_Click">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="15" Margin="0,0,10,0" VerticalAlignment="Center" Foreground="#8D76A5" />
+                <TextBlock Grid.Column="1" Text="Nhật ký" FontSize="13" FontWeight="SemiBold" Foreground="#7D6B92" VerticalAlignment="Center" />
+                <Border Grid.Column="2" Background="#EBE2F2" CornerRadius="8" Padding="6,1" VerticalAlignment="Center">
+                  <TextBlock x:Name="CategoryLogCount" Text="0" FontSize="10" FontWeight="Bold" Foreground="#85719B" />
+                </Border>
+              </Grid>
+            </Border>
+          </StackPanel>
+          <!-- Bottom of Category Sidebar -->
+          <StackPanel Grid.Row="2">
+            <!-- Open Storage Folder Button -->
+            <Button Click="OpenFolder_Click" Background="#EBE0F4" Foreground="#6B4CA4" Padding="10,8" Margin="0,0,0,10" ToolTip="Mở thư mục lưu trữ ~/minecraft_cookie_manager">
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <TextBlock Text="📁" FontSize="12" Margin="0,0,7,0" />
+                <TextBlock Text="Thư mục lưu trữ" FontSize="11" />
+              </StackPanel>
+            </Button>
+            <!-- Author, Version & GitHub Star Card -->
+            <Button xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="AuthorButton" Click="OpenAuthor_Click" Background="#FFFFFF" BorderBrush="#E4D7EF" Padding="10,12" HorizontalContentAlignment="Stretch" ToolTip="Một chút về GauCandy ♡">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Ellipse Width="34" Height="34" Margin="0,0,9,0">
+                  <Ellipse.Fill>
+                    <ImageBrush ImageSource="Assets/github-avatar.png" Stretch="UniformToFill" />
+                  </Ellipse.Fill>
+                </Ellipse>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                  <TextBlock Text="GauCandy" FontSize="12" FontWeight="SemiBold" Foreground="#59416F" />
+                  <TextBlock Text="made with a little ♡" FontSize="9" Foreground="#A18BB1" Margin="0,3,0,0" />
                 </StackPanel>
-            </ScrollViewer>
+                <TextBlock Grid.Column="2" Text="✧" FontSize="18" Foreground="#BEA0D2" VerticalAlignment="Center" />
+              </Grid>
+            </Button>
+          </StackPanel>
         </Grid>
+      </Border>
+      <!-- RIGHT CONTENT: DYNAMIC VIEW (COOKIE OR PROXY) -->
+      <Grid Grid.Column="1">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="*" />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <!-- VIEW 1: COOKIE MANAGER -->
+        <Grid x:Name="CookieView" Visibility="Visible">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+          <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="240" MinWidth="0" MaxWidth="360" x:Name="AccountsColumn" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <!-- Sub-Column 1: Saved Accounts List -->
+            <Border Background="#F9F6FC" BorderBrush="#EAE0F2" BorderThickness="0,0,1,0">
+              <Grid>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto" />
+                  <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <!-- Accounts Header -->
+                <Border Padding="14,12" BorderBrush="#EAE0F2" BorderThickness="0,0,0,1">
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                      <TextBlock Text="TÀI KHOẢN" Style="{StaticResource SectionHeader}" Margin="0" />
+                      <Border Background="#E6DAF2" CornerRadius="8" Padding="6,1" Margin="6,0,0,0">
+                        <TextBlock x:Name="AccountsCountText" Text="0" FontSize="10" FontWeight="Bold" Foreground="#7756A8" />
+                      </Border>
+                      <!-- Proxy Pool Status Indicator -->
+                      <Border x:Name="ProxyPoolBadge" Background="#F1EAF7" CornerRadius="8" Padding="6,1" Margin="6,0,0,0" ToolTip="Tráº¡ng thÃ¡i Proxy xoay vÃ²ng khi náº¡p/lÃ m má»›i">
+                        <StackPanel Orientation="Horizontal">
+                          <TextBlock x:Name="ProxyPoolIcon" Text="ðŸŒ" FontSize="9" Margin="0,0,3,0" VerticalAlignment="Center" />
+                          <TextBlock x:Name="ProxyPoolText" Text="IP mÃ¡y" FontSize="9.5" FontWeight="SemiBold" Foreground="#85719B" VerticalAlignment="Center" />
+                        </StackPanel>
+                      </Border>
+                    </StackPanel>
+                    <Button Grid.Column="1" Click="ChooseFile_Click" Style="{StaticResource PrimaryButton}" Padding="9,4" FontSize="11" ToolTip="Thêm file cookie (.txt, .json, .cookies) mới">
+                      <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="+" FontSize="12" FontWeight="Bold" Margin="0,0,4,0" />
+                        <TextBlock Text="Thêm" />
+                      </StackPanel>
+                    </Button>
+                  </Grid>
+                </Border>
+                <!-- Accounts List ScrollViewer -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="10,8">
+                  <StackPanel>
+                    <StackPanel x:Name="AccountsListContainer" />
+                    <!-- Empty Placeholder -->
+                    <Border x:Name="EmptyAccountsPlaceholder" Background="#FAF8FD" BorderBrush="#EFE7F6" BorderThickness="1" CornerRadius="12" Padding="14,24" Margin="0,6,0,0">
+                      <StackPanel HorizontalAlignment="Center">
+                        <Image Source="Assets/cookie.png" Width="32" Height="32" HorizontalAlignment="Center" Margin="0,0,0,8" RenderOptions.BitmapScalingMode="NearestNeighbor" />
+                        <TextBlock Text="Chưa có cookie nào" FontWeight="SemiBold" Foreground="#7D6B91" HorizontalAlignment="Center" FontSize="12" />
+                        <TextBlock Text="Thả file cookie (.txt, .json, .cookies) vào khung bên phải hoặc bấm '+ Thêm' để bắt đầu." Foreground="#A393B4" FontSize="11" TextAlignment="Center" Margin="0,5,0,10" />
+                        <Button Click="ChooseFile_Click" Style="{StaticResource PrimaryButton}" Content="Chọn file Cookie" HorizontalAlignment="Center" Padding="12,6" FontSize="11" />
+                      </StackPanel>
+                    </Border>
+                  </StackPanel>
+                </ScrollViewer>
+              </Grid>
+            </Border>
+            <!-- Sub-Column 2: Selected Account Details & Drop Zone & Logs -->
+            <Grid Grid.Column="1" Margin="18,14,18,12">
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+              </Grid.RowDefinitions>
+              <!-- Drop Zone Banner -->
+              <Border x:Name="DropZoneCard" Grid.Row="0" Margin="0,0,0,12" Background="#FFFFFF" BorderBrush="#DECDEE" BorderThickness="1.5" CornerRadius="12" Padding="14,9" Visibility="Collapsed">
+                <Grid>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                  </Grid.RowDefinitions>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+                  <Border Width="34" Height="34" CornerRadius="8" Background="#F4ECFA" VerticalAlignment="Center" Margin="0,0,10,0">
+                    <TextBlock Text="🍪" FontSize="17" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  </Border>
+                  <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock x:Name="FileNameText" Text="Kéo thả file cookie (.txt, .json, .cookies) vào đây để lưu" FontSize="12" FontWeight="SemiBold" Foreground="#4E3D66" TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="FileHintText" Text="Tự động kiểm tra và lưu vĩnh viễn vào ~/minecraft_cookie_manager/" FontSize="10" Foreground="#9C8CAE" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+                  <WrapPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Grid.Row="1" Grid.ColumnSpan="3" Margin="0,10,0,0">
+                    <Button Content="Dán Clipboard" Click="PasteCookie_Click" Background="#F4ECFA" Foreground="#714EA8" Padding="10,6" FontSize="11" Margin="0,0,6,0" ToolTip="Dán cookie từ bộ nhớ tạm" />
+                    <Button Content="Chọn file" Click="ChooseFile_Click" Padding="11,6" FontSize="11" />
+                  </WrapPanel>
+                </Grid>
+              </Border>
+              <!-- Account Details & Logs -->
+              <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel>
+                  <ProgressBar x:Name="WorkProgress" Height="3" Margin="0,0,0,10" Foreground="#8864BD" Background="#EFE7F6" BorderThickness="0" Visibility="Collapsed" />
+                  <!-- Account Details Card -->
+                  <Border Style="{StaticResource ModernCard}" Margin="0,0,0,12">
+                    <StackPanel>
+                      <Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Margin="0,0,0,12">
+                        <Grid.RowDefinitions>
+                          <RowDefinition Height="Auto" />
+                          <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid>
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                          </Grid.ColumnDefinitions>
+                          <Border Width="44" Height="44" Background="#EDE2F7" CornerRadius="10" Margin="0,0,10,0" ClipToBounds="True">
+                            <Grid>
+                              <TextBlock x:Name="ActiveInitialText" Text="✿" Foreground="#7A56A8" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                              <Image x:Name="ActiveAvatarImage" Width="44" Height="44" RenderOptions.BitmapScalingMode="NearestNeighbor" Stretch="UniformToFill" Visibility="Collapsed" />
+                            </Grid>
+                          </Border>
+                          <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <WrapPanel>
+                              <TextBlock x:Name="ActiveAccountTitle" Text="Chưa chọn tài khoản" FontSize="16" FontWeight="Bold" Foreground="#332845" Margin="0,0,8,4" />
+                              <Border x:Name="ActiveStatusBadge" Background="#EDF7EE" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
+                                <TextBlock x:Name="ActiveStatusText" Text="Sẵn sàng" FontSize="10" FontWeight="Bold" Foreground="#4E8C5C" />
+                              </Border>
+                            </WrapPanel>
+                            <TextBlock x:Name="ActiveAccountSubtitle" Text="Chọn tài khoản bên trái hoặc nạp cookie mới" FontSize="11" Foreground="{StaticResource Muted}" Margin="0,3,0,0" />
+                          </StackPanel>
+                        </Grid>
+                        <WrapPanel Grid.Row="1" Margin="0,12,0,0">
+                          <Button x:Name="ExportCookieButton" Content="📤 Xuất Cookie (.txt)" Click="ExportCookie_Click" Background="#EDE4F7" Foreground="#6F4FA6" Padding="10,7" FontSize="11" IsEnabled="False" Margin="0,0,6,6" />
+                          <Button x:Name="RefreshButton" Content="⚡ Làm mới Token" Click="RefreshCurrent_Click" Style="{StaticResource PrimaryButton}" Padding="10,7" FontSize="11" IsEnabled="False" Margin="0,0,6,6" />
+                          <Button x:Name="DeleteButton" Content="🗑 Xóa" Click="DeleteCurrent_Click" Style="{StaticResource DangerButton}" Padding="10,7" FontSize="11" IsEnabled="False" Margin="0,0,0,6" />
+                        </WrapPanel>
+                      </Grid>
+                      <Separator Background="#F1EAF7" Margin="0,0,0,12" />
+                      <!-- IGN & UUID -->
+                      <Grid Margin="0,0,0,10" x:Name="IdentityFields">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="*" />
+                          <ColumnDefinition Width="12" />
+                          <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                          <TextBlock Text="TÊN NGƯỜI CHƠI (IGN)" Style="{StaticResource SectionHeader}" />
+                          <Grid>
+                            <Grid.ColumnDefinitions>
+                              <ColumnDefinition Width="*" />
+                              <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="UsernameField" Text="Chưa chọn tài khoản" Style="{StaticResource ReadOnlyField}" />
+                            <Button Content="Sao chép" Click="CopyUsername_Click" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="6,0,0,0" Background="#EAE0F2" Foreground="#6C4EA3" Padding="7,3" FontSize="10" Grid.Column="1" />
+                          </Grid>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                          <TextBlock Text="UUID NGƯỜI CHƠI" Style="{StaticResource SectionHeader}" />
+                          <Grid>
+                            <Grid.ColumnDefinitions>
+                              <ColumnDefinition Width="*" />
+                              <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="UuidField" Text="Sẽ hiển thị khi chọn tài khoản" Style="{StaticResource ReadOnlyField}" />
+                            <Button Content="Sao chép" Click="CopyUuid_Click" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="6,0,0,0" Background="#EAE0F2" Foreground="#6C4EA3" Padding="7,3" FontSize="10" Grid.Column="1" />
+                          </Grid>
+                        </StackPanel>
+                      </Grid>
+                      <!-- Access Token -->
+                      <StackPanel Margin="0,0,0,12">
+                        <Grid Margin="0,0,0,4">
+                          <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                          </Grid.RowDefinitions>
+                          <TextBlock Text="MINECRAFT ACCESS TOKEN" Style="{StaticResource SectionHeader}" Margin="0" />
+                          <CheckBox x:Name="RevealToken" Content="Hiện Token" HorizontalAlignment="Left" FontSize="11" Foreground="#88739E" IsEnabled="False" Checked="RevealToken_Changed" Unchecked="RevealToken_Changed" Grid.Row="1" Margin="0,5,0,4" />
+                        </Grid>
+                        <Grid Height="36">
+                          <Border Background="#F9F7FC" CornerRadius="8" BorderBrush="#EAE2F2" BorderThickness="1" />
+                          <TextBlock x:Name="TokenPlaceholder" Text="Chưa có token (chọn hoặc làm mới tài khoản)" Foreground="#A595B5" FontSize="11" VerticalAlignment="Center" Margin="11,0" />
+                          <PasswordBox x:Name="TokenPassword" Background="Transparent" BorderThickness="0" Padding="11,8" Foreground="#584275" FontSize="12" Visibility="Collapsed" IsHitTestVisible="False" Focusable="False" />
+                          <TextBox x:Name="TokenField" Style="{StaticResource ReadOnlyField}" Visibility="Collapsed" />
+                        </Grid>
+                      </StackPanel>
+                      <!-- Copy Token Button -->
+                      <Button x:Name="CopyTokenButton" Content="📋 Sao chép Token (Ctrl+V)" FontSize="12" Padding="12,10" IsEnabled="False" Click="CopyToken_Click" HorizontalAlignment="Stretch" ToolTip="Sao chép Minecraft Access Token vào bộ nhớ tạm" />
+                      <Border xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Background="#F7F1FA" CornerRadius="11" Padding="13,12" Margin="0,14,0,0" ToolTip="Thống kê cookie đăng nhập Microsoft/Xbox/Minecraft. Mốc gần nhất không phải hạn chung của tài khoản; cookie có thể bị thu hồi trước hạn. Hạn token Minecraft được tính riêng.">
+                        <StackPanel>
+                          <TextBlock Text="COOKIE ĐĂNG NHẬP" FontSize="10" FontWeight="SemiBold" Foreground="#9C85AE" Margin="0,0,0,7" />
+                          <TextBlock x:Name="CookieSummaryText" Text="Chưa có thông tin cookie" FontSize="12" Foreground="#806691" />
+                          <TextBlock x:Name="CookieExpiryText" Text="Chọn tài khoản để xem hạn cookie." FontSize="11" Foreground="#AA93B7" Margin="0,6,0,0" />
+                        </StackPanel>
+                      </Border>
+                    </StackPanel>
+                  </Border>
+                  <!-- Activity Log Card -->
+                </StackPanel>
+              </ScrollViewer>
+            </Grid>
+          </Grid>
+          <!-- Notice Strip -->
+        </Grid>
+        <!-- VIEW 2: PROXY MANAGER -->
+        <Grid x:Name="ProxyView" Visibility="Collapsed">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+          <!-- Proxy Top Toolbar -->
+          <Border Grid.Row="0" Background="#FFFFFF" BorderBrush="#EAE0F2" BorderThickness="0,0,0,1" Padding="18,12">
+            <Grid>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+              </Grid.RowDefinitions>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <StackPanel VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                  <TextBlock Text="QUẢN LÝ PROXY" FontSize="15" FontWeight="Bold" Foreground="#3E2E55" Margin="0,0,8,0" />
+                  <Border Background="#E6DAF2" CornerRadius="8" Padding="6,1" VerticalAlignment="Center">
+                    <TextBlock x:Name="ProxyTotalCountText" Text="0 proxy" FontSize="10" FontWeight="Bold" Foreground="#7756A8" />
+                  </Border>
+                </StackPanel>
+                <TextBlock Text="Mặc định SOCKS5: host:port:user:pass. Với proxy HTTP, thêm tiền tố http://." FontSize="11" Foreground="#9281A4" Margin="0,2,0,0" />
+              </StackPanel>
+              <WrapPanel Grid.Row="1" Grid.ColumnSpan="2" Margin="0,12,0,0">
+                <Button x:Name="TestAllProxiesBtn" Content="⚡ Kiểm tra tất cả" Click="TestAllProxies_Click" Style="{StaticResource PrimaryButton}" Padding="12,7" Margin="0,0,8,6" />
+                <Button Content="🗑 Xóa tất cả" Click="ClearAllProxies_Click" Style="{StaticResource DangerButton}" Padding="10,7" Margin="0,0,8,6" />
+              </WrapPanel>
+            </Grid>
+          </Border>
+          <!-- Proxy Workspace (Input + List) -->
+          <Grid Grid.Row="1" Margin="18,14,18,12" x:Name="ProxyWorkspace">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="*" />
+              <RowDefinition Height="0" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="320" />
+              <ColumnDefinition Width="14" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <!-- Left: Add Proxies Box -->
+            <Border Style="{StaticResource ModernCard}" Padding="14" x:Name="ProxyInputCard">
+              <Grid>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto" />
+                  <RowDefinition Height="*" />
+                  <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <StackPanel Grid.Row="0" Margin="0,0,0,8">
+                  <TextBlock Text="THÊM PROXY MỚI" Style="{StaticResource SectionHeader}" />
+                  <TextBlock Text="Dán danh sách proxy vào đây (mỗi dòng 1 proxy)" FontSize="10" Foreground="#A292B4" />
+                </StackPanel>
+                <Border Grid.Row="1" Background="#F9F7FC" BorderBrush="#EAE0F2" BorderThickness="1" CornerRadius="8">
+                  <TextBox x:Name="ProxyInputText" AcceptsReturn="True" TextWrapping="NoWrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Background="Transparent" BorderThickness="0" Padding="10" FontSize="11" FontFamily="Consolas, Segoe UI" />
+                </Border>
+                <UniformGrid Grid.Row="2" Columns="2" Margin="0,10,0,0">
+                  <Button Content="📋 Dán Clipboard" Click="PasteProxies_Click" Padding="8,8" Margin="0,0,4,0" FontSize="11" />
+                  <Button Content="+ Lưu Proxy" Click="AddProxies_Click" Style="{StaticResource PrimaryButton}" Padding="8,8" Margin="4,0,0,0" FontSize="11" />
+                </UniformGrid>
+              </Grid>
+            </Border>
+            <!-- Right: Proxy List Cards -->
+            <Border Grid.Column="2" Style="{StaticResource ModernCard}" Padding="14" x:Name="ProxyListCard">
+              <Grid>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto" />
+                  <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Margin="0,0,0,10">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+                  <TextBlock Text="DANH SÁCH PROXY ĐÃ LƯU" Style="{StaticResource SectionHeader}" Margin="0" />
+                  <TextBlock x:Name="ProxyLiveSummaryText" Grid.Column="1" Text="0 hoạt động" FontSize="11" Foreground="#4E8C5C" FontWeight="SemiBold" />
+                </Grid>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                  <StackPanel>
+                    <StackPanel x:Name="ProxyListContainer" />
+                    <!-- Empty Placeholder -->
+                    <Border x:Name="EmptyProxyPlaceholder" Background="#FAF8FD" BorderBrush="#EFE7F6" BorderThickness="1" CornerRadius="12" Padding="14,32" Margin="0,10,0,0">
+                      <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="🌐" FontSize="30" HorizontalAlignment="Center" Margin="0,0,0,8" />
+                        <TextBlock Text="Chưa có proxy nào trong danh sách" FontWeight="SemiBold" Foreground="#7D6B91" HorizontalAlignment="Center" FontSize="12" />
+                        <TextBlock Text="Nhập IP:Port vào khung bên trái rồi nhấn '+ Lưu Proxy' nhé." Foreground="#A393B4" FontSize="11" TextAlignment="Center" Margin="0,5,0,0" />
+                      </StackPanel>
+                    </Border>
+                  </StackPanel>
+                </ScrollViewer>
+              </Grid>
+            </Border>
+          </Grid>
+          <!-- Proxy Bottom Notice -->
+        </Grid>
+        <Border x:Name="NoticeBorder" Grid.Row="1" Background="#F1EAF7" BorderBrush="#E7DDF0" BorderThickness="0,1,0,0" Padding="14,6">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="NoticeIcon" Text="♡" FontSize="13" Foreground="#8565AD" Margin="0,0,7,0" VerticalAlignment="Center" />
+            <TextBlock x:Name="NoticeText" Grid.Column="1" Text="Chọn file cookie để bắt đầu. Bạn có thể xem quá trình xử lý trong mục Nhật ký." Foreground="#75618F" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            <TextBlock Grid.Column="2" Text="Kéo thả file vào bất kỳ đâu trên cửa sổ để lưu" FontSize="10" Foreground="#A495B5" VerticalAlignment="Center" Visibility="Collapsed" />
+          </Grid>
+        </Border>
+        <Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="LogsView" Visibility="Collapsed" Margin="20,18,20,16">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+          <StackPanel>
+            <TextBlock Text="Nhật ký hoạt động" FontSize="23" FontWeight="SemiBold" Foreground="#59416F" />
+            <TextBlock x:Name="LogSessionText" FontSize="11" Foreground="#A08AAF" Margin="0,6,0,13" />
+            <WrapPanel>
+              <Button Content="↓  Xuất log báo lỗi" Click="ExportLog_Click" Background="#8664B1" Foreground="White" Padding="14,9" FontSize="12" Margin="0,0,8,8" x:Name="ExportLogButton" />
+              <Button Content="Thư mục log" Click="OpenLogsFolder_Click" Padding="12,9" FontSize="12" Margin="0,0,8,8" />
+              <Button Content="Xóa phiên này" Click="ClearLog_Click" Padding="12,9" FontSize="12" Background="#FAEFF4" Foreground="#B47A91" Margin="0,0,0,8" />
+            </WrapPanel>
+          </StackPanel>
+          <Border Grid.Row="2" Background="White" BorderBrush="#EAE0F2" BorderThickness="1" CornerRadius="14" Padding="6">
+            <Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+              </Grid.RowDefinitions>
+              <Expander x:Name="ImportResultsPanel" Header="Kết quả nhập file" IsExpanded="True" Visibility="Collapsed" Margin="10,8,10,10" Foreground="#846497" FontSize="12">
+                <ScrollViewer MaxHeight="210" VerticalScrollBarVisibility="Auto">
+                  <StackPanel x:Name="ImportResultsList" Margin="0,8,0,0" />
+                </ScrollViewer>
+              </Expander>
+              <ScrollViewer x:Name="LogScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Grid.Row="1">
+                <StackPanel x:Name="LogEntries" />
+              </ScrollViewer>
+            </Grid>
+          </Border>
+          <TextBlock x:Name="LogStatusText" Grid.Row="3" Foreground="#A38EB3" FontSize="10" Margin="3,12,3,0" Text="Lưu tối đa 10 phiên gần nhất trên máy. Bạn có thể xuất tệp để đính kèm khi báo lỗi." />
+        </Grid>
+      </Grid>
     </Grid>
+    <Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="AuthorOverlay" Grid.RowSpan="2" Panel.ZIndex="100" Background="#66352B43" Visibility="Collapsed" MouseDown="AuthorBackdrop_MouseDown" KeyboardNavigation.TabNavigation="Cycle">
+      <Border Width="360" Margin="20" HorizontalAlignment="Center" VerticalAlignment="Center" Background="#FFFCFF" CornerRadius="24" BorderBrush="#E9DDF2" BorderThickness="1">
+        <Border.Effect>
+          <DropShadowEffect Color="#362241" BlurRadius="32" ShadowDepth="8" Opacity="0.22" />
+        </Border.Effect>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel>
+            <Grid Height="116">
+              <Border Background="#F1E6F9" CornerRadius="24,24,0,0" />
+              <TextBlock Text="✧" FontSize="34" Foreground="#C6A6DA" Margin="40,22,0,0" />
+              <TextBlock Text="♡" FontSize="28" Foreground="#D7A1BC" HorizontalAlignment="Right" Margin="0,45,43,0" />
+              <Ellipse Width="76" Height="76" Stroke="#FFFCFF" StrokeThickness="5" VerticalAlignment="Bottom" Margin="0,0,0,-22">
+                <Ellipse.Fill>
+                  <ImageBrush ImageSource="Assets/github-avatar.png" Stretch="UniformToFill" />
+                </Ellipse.Fill>
+              </Ellipse>
+              <Button x:Name="AuthorCloseButton" Content="×" Click="CloseAuthor_Click" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,12,12,0" Padding="0" Width="28" Height="28" Background="#FAF5FD" Foreground="#9579AA" FontSize="19" AutomationProperties.Name="Đóng giới thiệu tác giả" />
+            </Grid>
+            <StackPanel Margin="27,34,27,24">
+              <TextBlock Text="Hi, tớ là GauCandy ✨" FontSize="21" FontWeight="SemiBold" Foreground="#59416F" TextAlignment="Center" />
+              <TextBlock Text="Một chiếc app nhỏ, được làm bằng chút tò mò và thật nhiều yêu thương." FontSize="12" Foreground="#9A85AA" TextAlignment="Center" Margin="0,10,0,14" LineHeight="20" />
+              <!-- Special Thanks to JerTran -->
+              <Border Background="#F6EEFB" CornerRadius="12" Padding="14,10" Margin="0,0,0,16" BorderBrush="#E5D3F2" BorderThickness="1">
+                <StackPanel>
+                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,3">
+                    <TextBlock Text="👑" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center" />
+                    <TextBlock Text="Special thanks to JerTran (Discord)" FontSize="12" FontWeight="Bold" Foreground="#6C4CA7" VerticalAlignment="Center" />
+                  </StackPanel>
+                  <TextBlock Text="Người tiên phong tài trợ đặt nền móng cho dự án" FontSize="11" Foreground="#8A73A0" TextAlignment="Center" />
+                </StackPanel>
+              </Border>
+              <Border Background="#FFF4E5" CornerRadius="14" Padding="18,15" BorderBrush="#F5DEC0" BorderThickness="1">
+                <StackPanel>
+                  <TextBlock Text="Nếu thấy app thật tuyệt vời thì tặng tớ 1 star nhó ♡" FontSize="14" FontWeight="SemiBold" Foreground="#AE753B" TextAlignment="Center" LineHeight="22" />
+                  <Button Content="✦   Tặng tớ 1 star" Click="StarRepo_Click" Background="#E7B477" Foreground="#FFFFFF" Margin="0,13,0,0" Padding="14,10" FontSize="13" />
+                </StackPanel>
+              </Border>
+              <Button Content="Ghé GitHub của tớ ↗" Click="GitHubCredit_Click" Background="Transparent" Foreground="#9A7CAE" FontSize="11" Margin="0,12,0,0" Padding="8,6" />
+              <TextBlock Text="v1.0.1  ·  AGPL-3.0" FontSize="9" Foreground="#BEACC9" TextAlignment="Center" Margin="0,10,0,0" x:Name="AuthorVersionText" />
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+    </Grid>
+    <Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="ConfirmationOverlay" Grid.RowSpan="2" Panel.ZIndex="200" Background="#77392C49" Visibility="Collapsed" KeyboardNavigation.TabNavigation="Cycle">
+      <Border Width="390" Margin="24" HorizontalAlignment="Center" VerticalAlignment="Center" Background="#FFFCFF" CornerRadius="22" BorderBrush="#E8DCEF" BorderThickness="1">
+        <Border.Effect>
+          <DropShadowEffect Color="#34233E" BlurRadius="30" ShadowDepth="7" Opacity="0.22" />
+        </Border.Effect>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Margin="26,22,26,24">
+            <Grid Margin="0,0,0,17">
+              <Border Width="48" Height="48" CornerRadius="15" Background="#FBEAF0" HorizontalAlignment="Left">
+                <TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="22" Foreground="#C47891" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <Button Content="×" Click="CancelConfirmation_Click" Width="28" Height="28" Padding="0" HorizontalAlignment="Right" VerticalAlignment="Top" Background="#F4EEF8" Foreground="#A28AB4" FontSize="19" AutomationProperties.Name="Đóng xác nhận" />
+            </Grid>
+            <TextBlock x:Name="ConfirmationTitle" Text="Xóa cookie này?" FontSize="22" FontWeight="SemiBold" Foreground="#59416F" />
+            <TextBlock x:Name="ConfirmationMessage" FontSize="13" Foreground="#95819F" LineHeight="22" Margin="0,11,0,23" />
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <Button x:Name="ConfirmationCancelButton" Content="Giữ lại" Click="CancelConfirmation_Click" Background="#F0E8F7" Foreground="#85639F" Padding="15,11" />
+              <Button x:Name="ConfirmationDeleteButton" Grid.Column="2" Content="Xóa cookie" Click="AcceptConfirmation_Click" Background="#C77D96" Foreground="White" Padding="15,11" />
+            </Grid>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+    </Grid>
+    <Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Name="UpdateOverlay" Grid.RowSpan="2" Panel.ZIndex="150" Background="#77392C49" Visibility="Collapsed" KeyboardNavigation.TabNavigation="Cycle">
+      <Border Width="440" Margin="22" HorizontalAlignment="Center" VerticalAlignment="Center" Background="#FFFCFF" CornerRadius="24" BorderBrush="#E8DCEF" BorderThickness="1">
+        <Border.Effect>
+          <DropShadowEffect Color="#34233E" BlurRadius="30" ShadowDepth="7" Opacity="0.22" />
+        </Border.Effect>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Margin="27,24">
+            <Grid Margin="0,0,0,17">
+              <Border Width="48" Height="48" CornerRadius="15" Background="#FFF0DD" HorizontalAlignment="Left">
+                <TextBlock Text="↑" FontSize="28" FontWeight="SemiBold" Foreground="#C58848" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <TextBlock x:Name="UpdatePreviewLabel" Text="XEM THỬ" Foreground="#AE8ABA" FontWeight="SemiBold" FontSize="10" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed" />
+            </Grid>
+            <TextBlock Text="Một phiên bản mới đã sẵn sàng" FontSize="22" FontWeight="SemiBold" Foreground="#59416F" />
+            <TextBlock x:Name="UpdateVersionText" Foreground="#B37C40" FontSize="12" FontWeight="SemiBold" Margin="0,9,0,13" />
+            <TextBlock x:Name="UpdateDescription" FontSize="12" Foreground="#95819F" LineHeight="21" />
+            <Border Background="#F7F1FA" CornerRadius="12" Padding="15" Margin="0,17,0,15">
+              <StackPanel>
+                <TextBlock Text="CÓ GÌ MỚI?" FontSize="10" FontWeight="SemiBold" Foreground="#A38AB4" Margin="0,0,0,9" />
+                <ScrollViewer MaxHeight="140" VerticalScrollBarVisibility="Auto">
+                  <TextBlock x:Name="UpdateNotesText" FontSize="12" Foreground="#846C97" LineHeight="20" />
+                </ScrollViewer>
+              </StackPanel>
+            </Border>
+            <ProgressBar x:Name="UpdateDownloadBar" Height="5" Minimum="0" Maximum="100" Value="0" Foreground="#D5A068" Background="#F3E6D8" BorderThickness="0" Visibility="Collapsed" />
+            <TextBlock x:Name="UpdateDownloadText" FontSize="11" Foreground="#A18AAE" Margin="0,10,0,16" LineHeight="18" />
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <Button x:Name="UpdateLaterButton" Content="Để sau" Click="UpdateLater_Click" Background="#F1EAF8" Foreground="#9171A7" Padding="18,11" />
+              <Button x:Name="InstallUpdateButton" Grid.Column="2" Content="Cập nhật và mở lại" Click="InstallUpdate_Click" Background="#C9945F" Foreground="White" Padding="16,11" />
+            </Grid>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+    </Grid>
+  </Grid>
 </Window>
-
-
-
-
-
-

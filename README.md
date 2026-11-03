@@ -1,27 +1,61 @@
-# Minecraft Session Tool — Session Garden
+# Minecraft Cookie Manager — v1.0.1 🍪
 
-Giao diện desktop tông tím và hồng pastel, linh vật pixel cây nhỏ, hỗ trợ tiếng Việt.
+Ứng dụng quản lý và lưu trữ cookie tài khoản Minecraft trên Windows, giao diện tông màu pastel thanh lịch với biểu tượng bánh quy pixel art đặc trưng của Minecraft.
 
-## Cách dùng
+## ✨ Tính năng nổi bật trong bản 1.0.1
 
-1. Mở MinecraftSessionTool.exe.
-2. Kéo thả một file cookie Netscape vào khung, hoặc nhấn **Chọn file**.
-3. Ứng dụng tự động tạo phiên ngay khi nhận file. Có thể nhấn **Hủy** khi đang xử lý.
-4. Khi thành công, thông tin người chơi xuất hiện và token được sao chép tự động. Có thể sao chép lại token hoặc lệnh chạy bằng hai nút dưới phần kết quả.
-5. Kết quả chỉ hiển thị trong ứng dụng và có thể sao chép; không xuất file hoặc tạo thư mục output.
+1. **Quản lý đa tài khoản & Cookie Store**:
+   - Tự động lưu trữ danh sách tài khoản và cookie vào thư mục riêng: `~/minecraft_cookie_manager/accounts.json`.
+   - Hiển thị Skin Avatar Minecraft thật của tài khoản (tải từ dịch vụ skin chính thức).
+   - Hỗ trợ xuất cookie ra định dạng Netscape (`.txt`) và JSON (`.json`).
 
-Token được che khi mới tạo; chọn **Hiện** để xem. Chọn file khác sẽ xóa kết quả đang hiển thị.
+2. **Xoay vòng Proxy (Proxy Pool & Rotation)**:
+   - Thêm danh sách proxy HTTP/HTTPS/SOCKS5 (dạng `host:port` hoặc `host:port:user:pass`).
+   - Tự động xoay vòng proxy theo cơ chế Round-robin khi lấy NFA token, giúp giảm thiểu và chống bị Microsoft gắn cờ IP / spam limit.
 
-Có thể kéo thả file trực tiếp lên biểu tượng .exe, hoặc đặt cookies.txt cạnh .exe để ứng dụng chọn sẵn khi mở. Ứng dụng tự động tạo phiên khi mở với file có sẵn.
+3. **Hỗ trợ toàn diện định dạng Cookie**:
+   - Nhận diện cả định dạng văn bản Netscape (`.txt`) lẫn định dạng JSON (`.json`) từ các extension như Cookie-Editor, EditThisCookie,...
 
-## Mã nguồn và đóng gói
+4. **Script lấy Cookie tự động từ Chrome**:
+   - Kèm theo công cụ `lay_cookie.bat` / `get_cookie.py` giúp mở trình duyệt Chrome, đăng nhập và tự động lưu/sao chép cookie vào clipboard.
 
-Bản Windows 64-bit chạy độc lập, không cần cài .NET riêng. Mã nguồn ở **src**; cần .NET SDK 10 để chỉnh sửa và đóng gói lại:
+5. **Làm mới Token với 1 click (⚡ Làm mới Token)**:
+   - Dễ dàng lấy lại Access Token Minecraft mới nhất từ cookie đã lưu.
 
-    dotnet publish .\src\MinecraftSessionTool.csproj -p:PublishProfile=Windows
+6. **Biểu tượng Cookie Minecraft sắc nét**:
+   - Texture bánh quy Minecraft chuẩn pixel-perfect.
 
-Kết quả ở **publish\MinecraftSessionTool.exe**. Đóng ứng dụng rồi thay file .exe tại thư mục chính bằng bản vừa đóng gói.
+---
 
-Luồng đăng nhập và định dạng file kết quả được giữ từ bản gốc. Giao diện bổ sung tiến trình, hủy thao tác và thông báo lỗi ngay trong cửa sổ.
+## 💖 Lời cảm ơn đặc biệt (Credits)
 
+- **Special thanks to JerTran (Discord)** — Người tiên phong tài trợ đặt nền móng cho dự án.
+
+---
+
+## 🚀 Cách sử dụng
+
+1. Mở file `MinecraftCookieManager.exe`.
+2. Thêm cookie tài khoản bằng một trong các cách:
+   - Kéo và thả file cookie (`.txt` hoặc `.cookies`) vào khung nhận diện.
+   - Bấm nút **Chọn file** hoặc **+ Thêm Cookie mới**.
+   - Bấm nút **Dán Clipboard** nếu bạn đã copy cookie vào bộ nhớ tạm.
+3. Ứng dụng sẽ tự động xác thực với Microsoft/Xbox/Mojang và lưu tài khoản vào danh sách.
+4. Chọn bất kỳ tài khoản nào ở danh sách bên trái để lấy **Access Token** hoặc **Lệnh chạy game** (Launch arguments).
+
+---
+
+## 🛠 Đóng gói từ mã nguồn
+
+Ứng dụng chạy độc lập (Self-contained, single-file), không yêu cầu cài trước .NET:
+
+```powershell
+dotnet publish .\src\MinecraftSessionTool.csproj -p:PublishProfile=Windows
+```
+
+File thực thi được tạo tại: `publish\MinecraftCookieManager.exe`.
+
+## Cập nhật trong ứng dụng
+
+Bấm nút cập nhật màu cam để xem nội dung thay đổi, tải và mở lại bản mới. Xem cách phát hành và dùng chế độ xem thử tại [CAP-NHAT.md](CAP-NHAT.md). Bản chạy độc lập đã bật nén, khoảng 64,9 MB.
 

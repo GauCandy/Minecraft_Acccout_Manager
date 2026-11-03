@@ -7,10 +7,17 @@ release/
 *.exe
 *.user
 *.suo
+__pycache__/
+*.pyc
 
-# Local runtime & test outputs
+# Local runtime & test outputs & sensitive cookie data
 output/
 message.txt
 cookies.txt
+cookies.json
+accounts.json
+proxies.json
+*.cookies
+*.token
 *.log
 backup*/

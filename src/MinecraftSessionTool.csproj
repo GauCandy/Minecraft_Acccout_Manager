@@ -7,16 +7,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
-    <AssemblyName>MinecraftSessionTool</AssemblyName>
-    <Version>1.0.0</Version>
-    <Product>Minecraft Session Tool</Product>
-    <Description>A cozy desktop companion for Minecraft sessions.</Description>
+    <AssemblyName>MinecraftCookieManager</AssemblyName>
+    <Version>1.0.1</Version>
+    <Product>Minecraft Cookie Manager</Product>
+    <Description>A cozy desktop cookie and session manager for Minecraft.</Description>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
   <ItemGroup>
     <Resource Include="Assets\app.ico" />
+    <Resource Include="Assets\cookie.png" />
     <Resource Include="Assets\github-avatar.png" />
     <InternalsVisibleTo Include="MinecraftSessionTool.UiChecks" />
   </ItemGroup>
 </Project>
-
