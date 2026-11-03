@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <StartupObject>MinecraftSessionTool.Program</StartupObject>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <AssemblyName>MinecraftSessionTool</AssemblyName>
+    <Version>1.0.0</Version>
+    <Product>Minecraft Session Tool</Product>
+    <Description>A cozy desktop companion for Minecraft sessions.</Description>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="Assets\app.ico" />
+    <Resource Include="Assets\github-avatar.png" />
+    <InternalsVisibleTo Include="MinecraftSessionTool.UiChecks" />
+  </ItemGroup>
+</Project>
+

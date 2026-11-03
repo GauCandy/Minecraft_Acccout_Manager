@@ -1,0 +1,16 @@
+# Build output & caches
+bin/
+obj/
+publish/
+dist/
+release/
+*.exe
+*.user
+*.suo
+
+# Local runtime & test outputs
+output/
+message.txt
+cookies.txt
+*.log
+backup*/
