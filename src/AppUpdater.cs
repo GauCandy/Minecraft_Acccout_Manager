@@ -16,6 +16,7 @@ internal sealed record UpdateDownloadProgress(long Received, long Total)
 internal static class AppUpdater
 {
     internal const string ReleasesUrl = "https://github.com/GauCandy/Minecraft_Acccout_Manager/releases";
+    private const string UpdateAssetLabel = "auto-update-win-x64";
     private const long MaxPackageSize = 1024L * 1024 * 1024;
     private static string TempRoot => Path.Combine(Path.GetTempPath(), "MinecraftCookieManager-updates");
 
@@ -45,28 +46,34 @@ internal static class AppUpdater
         if (!IsGitHubPage(page)) page = ReleasesUrl;
         var notes = root.TryGetProperty("body", out var body) ? body.GetString() ?? "" : "";
         if (notes.Length > 8000) notes = notes[..8000] + "…";
-        UpdateAsset? asset = null;
-        if (root.TryGetProperty("assets", out var assets))
-        {
-            // Prefer the current product name, while supporting the original release filename.
-            foreach (var name in new[] { "MinecraftAccountManager.exe", "MinecraftCookieManager.exe", "MinecraftSessionTool.exe" })
-            {
-                foreach (var item in assets.EnumerateArray())
-                {
-                    if (!string.Equals(item.GetProperty("name").GetString(), name, StringComparison.OrdinalIgnoreCase)) continue;
-                    var url = item.GetProperty("browser_download_url").GetString();
-                    var size = item.GetProperty("size").GetInt64();
-                    var digest = item.TryGetProperty("digest", out var digestElement) ? digestElement.GetString() : null;
-                    if (size <= 0 || size > MaxPackageSize || !IsGitHubAsset(url) || digest == null || !digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase)) continue;
-                    var hash = digest[7..];
-                    if (hash.Length != 64 || !hash.All(Uri.IsHexDigit)) continue;
-                    asset = new UpdateAsset(url!, size, hash.ToLowerInvariant());
-                    break;
-                }
-                if (asset != null) break;
-            }
-        }
+        var asset = root.TryGetProperty("assets", out var assets) ? SelectUpdateAsset(assets) : null;
         return new AppRelease(tag, page!, notes, asset);
+    }
+
+    private static UpdateAsset? SelectUpdateAsset(JsonElement assets)
+    {
+        if (assets.ValueKind != JsonValueKind.Array) return null;
+        var executables = assets.EnumerateArray()
+            .Where(item => item.TryGetProperty("name", out var name) && name.ValueKind == JsonValueKind.String
+                && name.GetString()!.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        var labeled = executables.Where(item => item.TryGetProperty("label", out var label)
+            && label.ValueKind == JsonValueKind.String
+            && string.Equals(label.GetString(), UpdateAssetLabel, StringComparison.OrdinalIgnoreCase)).ToArray();
+        // A label selects the Windows x64 package when several executables are published.
+        var candidates = labeled.Length > 0 ? labeled : executables;
+        if (candidates.Length != 1) return null;
+
+        var item = candidates[0];
+        if (!item.TryGetProperty("size", out var sizeElement) || sizeElement.ValueKind != JsonValueKind.Number
+            || !sizeElement.TryGetInt64(out var size) || size <= 0 || size > MaxPackageSize) return null;
+        var url = item.TryGetProperty("browser_download_url", out var urlElement) && urlElement.ValueKind == JsonValueKind.String
+            ? urlElement.GetString() : null;
+        var digest = item.TryGetProperty("digest", out var digestElement) && digestElement.ValueKind == JsonValueKind.String
+            ? digestElement.GetString() : null;
+        if (!IsGitHubAsset(url) || digest == null || !digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase)) return null;
+        var hash = digest[7..];
+        return hash.Length == 64 && hash.All(Uri.IsHexDigit) ? new UpdateAsset(url!, size, hash.ToLowerInvariant()) : null;
     }
 
     private static Version Normalize(Version version) => new(version.Major, version.Minor, Math.Max(0, version.Build), Math.Max(0, version.Revision));

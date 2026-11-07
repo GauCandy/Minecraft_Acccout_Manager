@@ -18,7 +18,7 @@ Nếu bản phát hành thiếu file hoặc thông tin kiểm tra phù hợp, ap
        dotnet publish .\src\MinecraftSessionTool.csproj -p:PublishProfile=Windows
 
 3. Tạo GitHub Release tại https://github.com/GauCandy/Minecraft_Acccout_Manager/releases với tag khớp phiên bản, ví dụ **v1.0.2**. Thêm ghi chú thay đổi để hiện trong app.
-4. Đổi tên bản đóng gói từ `publish/MinecraftCookieManager.exe` thành **MinecraftAccountManager.exe**, rồi đính kèm vào mục Assets, rồi phát hành release ở trạng thái thông thường (không phải draft hoặc pre-release). Giữ đúng tên file. Tên cũ MinecraftSessionTool.exe cũng được hỗ trợ.
+4. Tải file EXE độc lập lên mục Assets. Từ v1.0.3, updater nhận file có tên tùy ý nếu release chỉ có một EXE. Nếu có nhiều EXE, đặt nhãn `auto-update-win-x64` cho đúng một file Windows x64. Với GitHub CLI, đính kèm theo dạng `"TenBatKy.exe#auto-update-win-x64"`. Khi phát hành v1.0.3, giữ tên `MinecraftAccountManager.exe` để v1.0.2 nhận được bản chuyển tiếp. Nếu còn hỗ trợ nâng trực tiếp từ v1.0.1, đính kèm cùng bản EXE dưới tên MinecraftCookieManager.exe và chỉ đặt nhãn cập nhật trên file chính.
 5. Không tải nhầm file .exe trong src/bin: đó có thể là bản cần các file phụ. Dùng đúng file .exe chạy độc lập trong publish.
 
 GitHub cung cấp mã SHA256 cho asset sau khi tải lên. App dùng mã này và kiểm tra phiên bản bên trong file trước khi cài. Tag cao hơn nhưng file vẫn mang phiên bản cũ sẽ bị từ chối để tránh cập nhật sai.
