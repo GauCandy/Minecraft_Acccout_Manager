@@ -273,14 +273,33 @@ public partial class MainWindow : Window
     private void ReloadAccountsList(string? selectId = null)
     {
         accounts = CookieStore.LoadAll();
+        foreach (var a in accounts) a.Tags ??= new();
+        // Bộ lọc không còn tag nào khớp, hoặc tài khoản cần chọn đang bị lọc ẩn → bỏ lọc.
+        if (tagFilter != null && !accounts.Any(a => HasTag(a, tagFilter))) tagFilter = null;
+        if (tagFilter != null && selectId != null && !accounts.Any(a => a.Id == selectId && HasTag(a, tagFilter))) tagFilter = null;
+        var visible = VisibleAccounts();
+        selectedIds.IntersectWith(visible.Select(a => a.Id));
+
         AccountsCountText.Text = accounts.Count.ToString();
         CategoryCookieCount.Text = accounts.Count.ToString();
-        EmptyAccountsPlaceholder.Visibility = accounts.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         AccountsListContainer.Children.Clear();
+
+        bool filtering = !string.IsNullOrWhiteSpace(searchTerm) || tagFilter != null;
+        EmptyAccountsPlaceholder.Visibility = visible.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (accounts.Count == 0)
+        {
+            EmptyListTitle.Text = "Chưa có tài khoản nào";
+            EmptyListHint.Text = "Bấm '+ Thêm tài khoản' ở góc trên, hoặc thả file cookie vào cửa sổ.";
+        }
+        else if (filtering)
+        {
+            EmptyListTitle.Text = "Không có tài khoản khớp";
+            EmptyListHint.Text = "Thử xóa từ khóa tìm kiếm hoặc bỏ lọc tag.";
+        }
 
         SavedAccount? targetSelect = null;
 
-        foreach (var acc in accounts)
+        foreach (var acc in visible)
         {
             if (selectId != null && acc.Id == selectId) targetSelect = acc;
 
@@ -288,18 +307,20 @@ public partial class MainWindow : Window
             AccountsListContainer.Children.Add(card);
         }
 
+        RebuildTagFilter();
+        UpdateSelectionUI();
+
         if (targetSelect != null)
         {
             SelectAccount(targetSelect);
         }
-        else if (currentAccount != null && accounts.Any(a => a.Id == currentAccount.Id))
+        else if (currentAccount != null && visible.Any(a => a.Id == currentAccount.Id))
         {
-            var match = accounts.First(a => a.Id == currentAccount.Id);
-            SelectAccount(match);
+            SelectAccount(visible.First(a => a.Id == currentAccount.Id));
         }
-        else if (accounts.Count > 0)
+        else if (visible.Count > 0)
         {
-            SelectAccount(accounts[0]);
+            SelectAccount(visible[0]);
         }
         else
         {
@@ -324,8 +345,24 @@ public partial class MainWindow : Window
         };
 
         var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(48) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var selectBox = new CheckBox
+        {
+            IsChecked = selectedIds.Contains(acc.Id),
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, 1, 4, 0),
+            ToolTip = "Chọn tài khoản này"
+        };
+        selectBox.Click += (_, _) =>
+        {
+            if (selectBox.IsChecked == true) selectedIds.Add(acc.Id); else selectedIds.Remove(acc.Id);
+            UpdateSelectionUI();
+        };
+        Grid.SetColumn(selectBox, 0);
+        grid.Children.Add(selectBox);
 
         // Avatar Skin Container
         var avatarBorder = new Border
@@ -383,7 +420,7 @@ public partial class MainWindow : Window
         }
 
         avatarBorder.Child = avatarGrid;
-        Grid.SetColumn(avatarBorder, 0);
+        Grid.SetColumn(avatarBorder, 1);
         grid.Children.Add(avatarBorder);
 
         // Account Details Info
@@ -392,10 +429,24 @@ public partial class MainWindow : Window
             VerticalAlignment = VerticalAlignment.Center
         };
 
-        // Row 1: IGN + Status badge
-        var row1 = new Grid();
-        row1.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        row1.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var row1 = new DockPanel { HorizontalAlignment = HorizontalAlignment.Left };
+        string? accountType = acc.SourceName switch
+        {
+            "Đăng nhập Microsoft" => "Microsoft",
+            "Refresh token" => "Refresh token",
+            _ when !string.IsNullOrWhiteSpace(acc.RawCookies) => "Cookie",
+            _ when !string.IsNullOrWhiteSpace(acc.RefreshToken) => "Refresh token",
+            _ => null
+        };
+        if (accountType != null)
+        {
+            var typeBadge = MakeChip(accountType, "#EFE7F6", "#6C4CA7", 9.5);
+            typeBadge.Padding = new Thickness(5, 1, 5, 1);
+            typeBadge.Margin = new Thickness(6, 0, 0, 0);
+            typeBadge.VerticalAlignment = VerticalAlignment.Center;
+            DockPanel.SetDock(typeBadge, Dock.Right);
+            row1.Children.Add(typeBadge);
+        }
 
         var nameText = new TextBlock
         {
@@ -407,7 +458,6 @@ public partial class MainWindow : Window
             TextWrapping = TextWrapping.NoWrap,
             VerticalAlignment = VerticalAlignment.Center
         };
-        Grid.SetColumn(nameText, 0);
         row1.Children.Add(nameText);
 
         var statusBadge = new Border
@@ -426,25 +476,15 @@ public partial class MainWindow : Window
             Foreground = Brush(acc.StatusColor)
         };
         statusBadge.Child = statusText;
-        Grid.SetColumn(statusBadge, 1);
-
         info.Children.Add(row1);
+        var statusRow = new Grid { Height = 18, Margin = new Thickness(0, 4, 0, 0), HorizontalAlignment = HorizontalAlignment.Left };
+        statusRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        statusRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         statusBadge.HorizontalAlignment = HorizontalAlignment.Left;
-        statusBadge.Margin = new Thickness(0, 4, 0, 0);
-        info.Children.Add(statusBadge);
-
-        // Row 3: Nguồn + Thời gian làm mới
-        var metaText = new TextBlock
-        {
-            Text = string.IsNullOrEmpty(acc.SourceName) ? "Trực tiếp" : acc.SourceName,
-            ToolTip = $"Nguồn: {acc.SourceName}\nCập nhật: {acc.LastRefreshedText}",
-            TextWrapping = TextWrapping.NoWrap,
-            FontSize = 10,
-            Foreground = Brush("#A495B5"),
-            Margin = new Thickness(0, 2, 0, 0),
-            TextTrimming = TextTrimming.CharacterEllipsis
-        };
-        info.Children.Add(metaText);
+        statusBadge.Margin = new Thickness(0);
+        statusBadge.ToolTip = $"Cập nhật: {acc.LastRefreshedText}";
+        statusRow.Children.Add(statusBadge);
+        info.Children.Add(statusRow);
 
         if (!string.IsNullOrEmpty(acc.LastProxyUsed))
         {
@@ -461,7 +501,33 @@ public partial class MainWindow : Window
             info.Children.Add(proxyPill);
         }
 
-        Grid.SetColumn(info, 1);
+        if (acc.Tags is { Count: > 0 })
+        {
+            var tagLabel = new TextBlock
+            {
+                Text = acc.Tags.Count == 1 ? acc.Tags[0] : $"{acc.Tags.Count} tag",
+                FontSize = 9,
+                Foreground = Brush("#7756A8"),
+                TextWrapping = TextWrapping.NoWrap,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                MaxWidth = 68,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            var tagBadge = new Border
+            {
+                Child = tagLabel,
+                Background = Brush("#EFE7F6"),
+                CornerRadius = new CornerRadius(5),
+                Padding = new Thickness(5, 1, 5, 1),
+                Margin = new Thickness(4, 0, 0, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                ToolTip = string.Join(", ", acc.Tags)
+            };
+            Grid.SetColumn(tagBadge, 1);
+            statusRow.Children.Add(tagBadge);
+        }
+        Grid.SetColumn(info, 2);
         grid.Children.Add(info);
 
         card.Child = grid;
@@ -483,6 +549,7 @@ public partial class MainWindow : Window
     private void SelectAccount(SavedAccount? acc)
     {
         currentAccount = acc;
+        RenderTagChips();
         var cookieInfo = CookieExpiryInfo.Read(acc?.RawCookies, DateTimeOffset.UtcNow);
         CookieSummaryText.Text = cookieInfo.Summary;
         CookieExpiryText.Text = cookieInfo.ExpiryText(DateTimeOffset.UtcNow);
@@ -499,6 +566,10 @@ public partial class MainWindow : Window
             }
         }
 
+        // Trạng thái trống bên phải khi chưa chọn tài khoản nào.
+        DetailEmptyState.Visibility = acc == null ? Visibility.Visible : Visibility.Collapsed;
+        DetailContent.Visibility = acc == null ? Visibility.Collapsed : Visibility.Visible;
+
         if (acc == null)
         {
             currentSession = null;
@@ -508,7 +579,7 @@ public partial class MainWindow : Window
             ActiveAvatarImage.Source = null;
             ActiveAccountTitle.Text = "Chưa chọn tài khoản";
             ActiveAccountSubtitle.Text = "Chọn tài khoản bên trái hoặc nhập cookie mới";
-            UsernameField.Text = "Chưa có";
+
             UuidField.Text = "Chưa có";
             TokenPassword.Password = "";
             TokenField.Clear();
@@ -523,10 +594,13 @@ public partial class MainWindow : Window
             return;
         }
 
-        ActiveAccountTitle.Text = acc.Username;
+        ActiveAccountTitle.Text = string.IsNullOrWhiteSpace(acc.Username) ? "(Chưa có tên)" : acc.Username;
+        ActiveStatusText.Text = acc.Status;
+        ActiveStatusBadge.Background = Brush(acc.StatusBgColor);
+        ActiveStatusText.Foreground = Brush(acc.StatusColor);
         string proxyUsedStr = !string.IsNullOrEmpty(acc.LastProxyUsed) ? $"  ·  Proxy: {ProxyStore.GetDisplayAddress(acc.LastProxyUsed)}" : "";
         ActiveAccountSubtitle.Text = $"Cập nhật lúc: {acc.LastRefreshedText}  ·  Nguồn: {(string.IsNullOrEmpty(acc.SourceName) ? "Trực tiếp" : acc.SourceName)}{proxyUsedStr}";
-        UsernameField.Text = acc.Username;
+
         UuidField.Text = acc.FormattedUuid;
 
         // Cập nhật Avatar skin 64px trong chi tiết tài khoản
@@ -584,8 +658,10 @@ public partial class MainWindow : Window
 
         RevealToken.IsEnabled = hasToken;
         CopyTokenButton.IsEnabled = hasToken;
-        ExportCookieButton.IsEnabled = !string.IsNullOrEmpty(acc.RawCookies);
-        RefreshButton.IsEnabled = !busy && !string.IsNullOrEmpty(acc.RawCookies);
+        bool canExportCookie = !string.IsNullOrEmpty(acc.RawCookies) && string.IsNullOrEmpty(acc.RefreshToken);
+        ExportCookieButton.IsEnabled = canExportCookie;
+        ExportCookieButton.Visibility = canExportCookie ? Visibility.Visible : Visibility.Collapsed;
+        RefreshButton.IsEnabled = !busy && acc.CanRefresh;
         DeleteButton.IsEnabled = !busy;
 
         string formattedUuidClean = (acc.Uuid ?? "").Replace("-", "");
@@ -644,10 +720,6 @@ public partial class MainWindow : Window
 
         try
         {
-            FileNameText.Text = Path.GetFileName(filePath);
-            var fi = new FileInfo(filePath);
-            FileHintText.Text = $"{fi.Length / 1024d:0.#} KB  ·  Đang kiểm tra và lưu cookie…";
-
             string text = await File.ReadAllTextAsync(filePath);
             return await ProcessCookieTextAsync(text, Path.GetFileName(filePath));
         }
@@ -700,9 +772,7 @@ public partial class MainWindow : Window
             AddLog(ActivityEvent.CookieSaved, ActivityLevel.Success, durationMs: operationTimer.ElapsedMilliseconds);
             SetStatus("Thành công", "#EDF4E8", "#6E8A61");
 
-            ShowNotice("Đã thêm tài khoản.", success: true);
-
-            FileHintText.Text = $"Đã lưu vào kho  ·  {result.Username}";
+            ShowNotice($"Đã thêm tài khoản {result.Username}.", success: true);
             return true;
         }
         catch (OperationCanceledException) when (source.IsCancellationRequested)
@@ -714,9 +784,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            var message = ex is HttpRequestException
-                ? "Chưa kết nối được dịch vụ. Vui lòng kiểm tra mạng rồi thử lại nhé."
-                : FriendlyFailure(ex);
+            var message = ex is MicrosoftRefreshRevokedException ? ex.Message : FriendlyFailure(ex);
             SetStatus("Lỗi cookie", "#FBEAF0", "#B16A84");
             LogError(ActivityEvent.ProcessingFailed, ex, operationTimer.ElapsedMilliseconds);
             ShowNotice(message, error: true);
@@ -733,9 +801,9 @@ public partial class MainWindow : Window
     private async void RefreshCurrent_Click(object sender, RoutedEventArgs e)
     {
         if (busy || importingFiles || currentAccount == null) return;
-        if (string.IsNullOrWhiteSpace(currentAccount.RawCookies))
+        if (!currentAccount.CanRefresh)
         {
-            ShowNotice("Tài khoản này không có dữ liệu cookie gốc để làm mới.", error: true);
+            ShowNotice("Tài khoản này không có cookie hoặc phiên Microsoft để làm mới.", error: true);
             return;
         }
 
@@ -760,8 +828,8 @@ public partial class MainWindow : Window
             {
                 AddLog(ActivityEvent.ProxySelected);
             }
-            var result = await SessionService.CreateFromTextAsync(currentAccount.RawCookies, progress, source.Token, proxyAddr);
-            CookieStore.UpdateStatus(currentAccount.Id, "Hoạt động", result.AccessToken, proxyAddr);
+            var (result, newRefresh) = await RefreshAccountCoreAsync(currentAccount, proxyAddr, progress, source.Token);
+            CookieStore.UpdateStatus(currentAccount.Id, "Hoạt động", result.AccessToken, proxyAddr, newRefresh);
             ReloadAccountsList(currentAccount.Id);
 
             AddLog(ActivityEvent.SessionRefreshed, ActivityLevel.Success, durationMs: operationTimer.ElapsedMilliseconds);
@@ -774,11 +842,14 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            CookieStore.UpdateStatus(currentAccount.Id, "Hết hạn");
+            // Chỉ đánh dấu "Hết hạn" khi thật sự là lỗi xác thực; rate limit / mất mạng chỉ là lỗi tạm thời.
+            bool expired = SessionActivityLog.ClassifyFailure(ex) == ActivityFailure.AuthenticationRequired;
+            if (expired) CookieStore.UpdateStatus(currentAccount.Id, "Hết hạn");
             ReloadAccountsList(currentAccount.Id);
 
-            var msg = FriendlyFailure(ex);
-            SetStatus("Hết hạn", "#FFF1E5", "#D35400");
+            var msg = ex is MicrosoftRefreshRevokedException ? ex.Message : FriendlyFailure(ex);
+            if (expired) SetStatus("Hết hạn", "#FFF1E5", "#D35400");
+            else SetStatus("Chưa làm mới được", "#FBEAF0", "#B16A84");
             LogError(ActivityEvent.RefreshFailed, ex, operationTimer.ElapsedMilliseconds);
             ShowNotice($"Làm mới thất bại: {msg}", error: true);
         }
@@ -788,6 +859,570 @@ public partial class MainWindow : Window
             SetBusy(false);
         }
     }
+
+    /// <summary>Làm mới 1 tài khoản: ưu tiên refresh token Microsoft, nếu đã chết thì quay về cookie.</summary>
+    private static async Task<(SessionResult Result, string? NewRefresh)> RefreshAccountCoreAsync(
+        SavedAccount acc, string? proxyAddr, IProgress<string> progress, CancellationToken ct)
+    {
+        if (!string.IsNullOrEmpty(acc.RefreshToken))
+        {
+            try
+            {
+                var ms = await MicrosoftAuthService.RefreshSessionAsync(acc.RefreshToken, progress, ct, proxyAddr);
+                return (ms.Session, ms.RefreshToken);
+            }
+            catch (MicrosoftRefreshRevokedException) when (!string.IsNullOrWhiteSpace(acc.RawCookies))
+            {
+                // Refresh token đã chết nhưng vẫn còn cookie — thử làm mới bằng cookie.
+            }
+        }
+        if (string.IsNullOrWhiteSpace(acc.RawCookies)) throw new MicrosoftRefreshRevokedException();
+        var result = await SessionService.CreateFromTextAsync(acc.RawCookies, progress, ct, proxyAddr);
+        return (result, null);
+    }
+
+    #region Bulk selection / refresh / tags
+    private readonly HashSet<string> selectedIds = new();
+    private string? tagFilter;
+    private string searchTerm = "";
+    private bool bulkRunning;
+    private List<string> tagOverlayTargets = new();
+
+    private static bool HasTag(SavedAccount acc, string tag)
+        => acc.Tags?.Contains(tag, StringComparer.OrdinalIgnoreCase) == true;
+
+    private List<SavedAccount> VisibleAccounts()
+    {
+        IEnumerable<SavedAccount> q = accounts;
+        if (!string.IsNullOrEmpty(tagFilter)) q = q.Where(a => HasTag(a, tagFilter));
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.Trim();
+            q = q.Where(a =>
+                a.Username.Contains(term, StringComparison.OrdinalIgnoreCase)
+                || (a.Tags?.Any(t => t.Contains(term, StringComparison.OrdinalIgnoreCase)) == true));
+        }
+        return q.ToList();
+    }
+
+    private void UpdateSelectionUI()
+    {
+        var visible = VisibleAccounts();
+        int selectedVisible = visible.Count(a => selectedIds.Contains(a.Id));
+        AccountsToolbar.Visibility = accounts.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        SelectAllCheck.IsChecked = visible.Count > 0 && selectedVisible == visible.Count ? true : selectedVisible == 0 ? false : null;
+        ListCountText.Text = $"{visible.Count} tài khoản";
+        BulkSelectedText.Text = $"Đã chọn {selectedIds.Count} tài khoản";
+        BulkActionsPanel.Visibility = selectedIds.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void Search_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        searchTerm = SearchBox.Text ?? "";
+        SearchPlaceholder.Visibility = string.IsNullOrEmpty(searchTerm) ? Visibility.Visible : Visibility.Collapsed;
+        ReloadAccountsList(currentAccount?.Id);
+    }
+
+    private void ClearSelection_Click(object sender, RoutedEventArgs e)
+    {
+        selectedIds.Clear();
+        foreach (var child in AccountsListContainer.Children)
+            if (child is Border { Child: Grid g } && g.Children.OfType<CheckBox>().FirstOrDefault() is { } cb)
+                cb.IsChecked = false;
+        UpdateSelectionUI();
+    }
+
+    private void AddAccount_Click(object sender, RoutedEventArgs e)
+    {
+        if (AddAccountButton.ContextMenu is { } menu)
+        {
+            menu.PlacementTarget = AddAccountButton;
+            menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+            menu.IsOpen = true;
+        }
+    }
+
+    private void ProxyBadge_Click(object sender, MouseButtonEventArgs e) => SwitchCategory(1);
+
+    private void SelectAll_Click(object sender, RoutedEventArgs e)
+    {
+        var visible = VisibleAccounts();
+        bool selectAll = !(visible.Count > 0 && visible.All(a => selectedIds.Contains(a.Id)));
+        foreach (var acc in visible)
+        {
+            if (selectAll) selectedIds.Add(acc.Id); else selectedIds.Remove(acc.Id);
+        }
+        foreach (var child in AccountsListContainer.Children)
+            if (child is Border { Tag: SavedAccount a, Child: Grid g } && g.Children.OfType<CheckBox>().FirstOrDefault() is { } cb)
+                cb.IsChecked = selectedIds.Contains(a.Id);
+        UpdateSelectionUI();
+    }
+
+    private void RebuildTagFilter()
+    {
+        TagFilterPanel.Children.Clear();
+        var counts = accounts.SelectMany(a => a.Tags ?? new()).GroupBy(t => t, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase).ToList();
+        TagFilterPanel.Visibility = counts.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (counts.Count == 0) return;
+
+        void Add(string label, string? value, bool active)
+        {
+            var chip = MakeChip(label, active ? "#8864BD" : "#EFE7F6", active ? "#FFFFFF" : "#6C4CA7", 10.5);
+            chip.Cursor = Cursors.Hand;
+            chip.Margin = new Thickness(0, 0, 5, 5);
+            chip.MouseLeftButtonDown += (_, _) =>
+            {
+                tagFilter = active ? null : value;
+                ReloadAccountsList(currentAccount?.Id);
+            };
+            TagFilterPanel.Children.Add(chip);
+        }
+
+        Add($"Tất cả ({accounts.Count})", null, tagFilter == null);
+        foreach (var g in counts)
+            Add($"🏷 {g.Key} ({g.Count()})", g.Key, string.Equals(tagFilter, g.Key, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private Border MakeChip(string text, string background, string foreground, double fontSize = 9.5, Action? onRemove = null)
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal };
+        row.Children.Add(new TextBlock { Text = text, FontSize = fontSize, FontWeight = FontWeights.SemiBold, Foreground = Brush(foreground), VerticalAlignment = VerticalAlignment.Center });
+        if (onRemove != null)
+        {
+            var x = new TextBlock { Text = "×", FontSize = fontSize + 2, Foreground = Brush(foreground), Margin = new Thickness(6, -1, 0, 0), Cursor = Cursors.Hand, VerticalAlignment = VerticalAlignment.Center, ToolTip = "Gỡ tag" };
+            x.MouseLeftButtonDown += (_, e) => { e.Handled = true; onRemove(); };
+            row.Children.Add(x);
+        }
+        return new Border { Background = Brush(background), CornerRadius = new CornerRadius(8), Padding = new Thickness(8, 3, 8, 3), Child = row };
+    }
+
+    private void RenderTagChips()
+    {
+        TagChipsPanel.Children.Clear();
+        AddTagButton.IsEnabled = currentAccount != null;
+        TagInputBox.IsEnabled = currentAccount != null;
+        if (currentAccount == null) return;
+        var acc = currentAccount;
+        if (acc.Tags == null || acc.Tags.Count == 0)
+        {
+            TagChipsPanel.Children.Add(new TextBlock { Text = "Chưa có tag nào.", FontSize = 11, Foreground = Brush("#AA93B7") });
+            return;
+        }
+        foreach (var tag in acc.Tags.ToList())
+        {
+            var chip = MakeChip("🏷 " + tag, "#E6DAF2", "#6C4CA7", 10.5, () =>
+            {
+                CookieStore.UpdateTags(new[] { acc.Id }, Array.Empty<string>(), new[] { tag });
+                ReloadAccountsList(acc.Id);
+            });
+            chip.Margin = new Thickness(0, 0, 5, 5);
+            TagChipsPanel.Children.Add(chip);
+        }
+    }
+
+    private void AddTag_Click(object sender, RoutedEventArgs e)
+    {
+        if (currentAccount == null) return;
+        var tags = TagInputBox.Text.Split(',', ';').Select(CookieStore.NormalizeTag).OfType<string>().ToList();
+        if (tags.Count == 0) return;
+        CookieStore.UpdateTags(new[] { currentAccount.Id }, tags, Array.Empty<string>());
+        TagInputBox.Clear();
+        ReloadAccountsList(currentAccount.Id);
+    }
+
+    private void TagInput_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter) return;
+        AddTag_Click(sender, e);
+        e.Handled = true;
+    }
+
+    private void BulkTag_Click(object sender, RoutedEventArgs e)
+    {
+        if (busy || selectedIds.Count == 0) return;
+        tagOverlayTargets = selectedIds.ToList();
+        TagOverlayTitle.Text = $"Tag cho {tagOverlayTargets.Count} tài khoản";
+        TagOverlayInput.Clear();
+        TagOverlaySuggestions.Children.Clear();
+        foreach (var tag in accounts.SelectMany(a => a.Tags ?? new()).Distinct(StringComparer.OrdinalIgnoreCase)
+                     .OrderBy(t => t, StringComparer.CurrentCultureIgnoreCase))
+        {
+            var chip = MakeChip("🏷 " + tag, "#EFE7F6", "#6C4CA7", 10.5);
+            chip.Cursor = Cursors.Hand;
+            chip.Margin = new Thickness(0, 0, 5, 5);
+            chip.MouseLeftButtonDown += (_, _) =>
+            {
+                var current = TagOverlayInput.Text.Split(',', ';').Select(CookieStore.NormalizeTag).OfType<string>().ToList();
+                if (!current.Contains(tag, StringComparer.OrdinalIgnoreCase)) current.Add(tag);
+                TagOverlayInput.Text = string.Join(", ", current);
+                TagOverlayInput.CaretIndex = TagOverlayInput.Text.Length;
+            };
+            TagOverlaySuggestions.Children.Add(chip);
+        }
+        TagOverlay.Visibility = Visibility.Visible;
+        TagOverlayInput.Focus();
+    }
+
+    private void ApplyTagOverlay(bool add)
+    {
+        var tags = TagOverlayInput.Text.Split(',', ';').Select(CookieStore.NormalizeTag).OfType<string>().ToList();
+        if (tags.Count == 0) { ShowNotice("Hãy nhập ít nhất một tag.", error: true); return; }
+        if (add) CookieStore.UpdateTags(tagOverlayTargets, tags, Array.Empty<string>());
+        else CookieStore.UpdateTags(tagOverlayTargets, Array.Empty<string>(), tags);
+        TagOverlay.Visibility = Visibility.Collapsed;
+        ReloadAccountsList(currentAccount?.Id);
+        ShowNotice($"Đã {(add ? "gắn" : "gỡ")} tag cho {tagOverlayTargets.Count} tài khoản.", success: true);
+    }
+
+    private void TagOverlayApply_Click(object sender, RoutedEventArgs e) => ApplyTagOverlay(true);
+    private void TagOverlayRemove_Click(object sender, RoutedEventArgs e) => ApplyTagOverlay(false);
+    private void TagOverlayCancel_Click(object sender, RoutedEventArgs e) => TagOverlay.Visibility = Visibility.Collapsed;
+    private void TagOverlayInput_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter) return;
+        ApplyTagOverlay(true);
+        e.Handled = true;
+    }
+
+    private void BulkCopy_Click(object sender, RoutedEventArgs e)
+    {
+        if (busy || selectedIds.Count == 0) return;
+        var tokens = accounts.Where(a => selectedIds.Contains(a.Id) && !string.IsNullOrEmpty(a.AccessToken))
+            .Select(a => a.AccessToken!).ToList();
+        if (tokens.Count == 0)
+        {
+            ShowNotice("Các tài khoản đã chọn chưa có token. Hãy làm mới token trước.", error: true);
+            return;
+        }
+        bool copied = TryCopy(string.Join(Environment.NewLine, tokens));
+        AddLog(copied ? ActivityEvent.TokenCopied : ActivityEvent.ClipboardFailed, copied ? ActivityLevel.Success : ActivityLevel.Warning, itemCount: tokens.Count);
+        int missing = selectedIds.Count - tokens.Count;
+        ShowNotice(copied
+            ? $"Đã sao chép {tokens.Count} token (mỗi dòng một token)" + (missing > 0 ? $" · {missing} tài khoản chưa có token." : ".")
+            : "Clipboard đang bận.", success: copied, error: !copied);
+    }
+
+    private async void BulkRefresh_Click(object sender, RoutedEventArgs e)
+    {
+        if (bulkRunning) { cancellation?.Cancel(); return; }
+        if (busy || importingFiles) return;
+
+        var targets = accounts.Where(a => selectedIds.Contains(a.Id) && a.CanRefresh).ToList();
+        if (targets.Count == 0)
+        {
+            ShowNotice("Các tài khoản đã chọn không có cookie hoặc phiên Microsoft để làm mới.", error: true);
+            return;
+        }
+
+        // Mỗi proxy là một "làn" riêng: N proxy → làm mới N tài khoản cùng lúc. Không có proxy thì dùng IP máy, chạy tuần tự.
+        var lanes = ProxyStore.GetCandidates().Select(p => (string?)p.Address).ToList();
+        if (lanes.Count == 0) lanes.Add(null);
+        int workers = Math.Min(lanes.Count, targets.Count);
+
+        using var source = new CancellationTokenSource();
+        cancellation = source;
+        bulkRunning = true;
+        SetBusy(true);
+        BulkRefreshButton.Content = "⏹ Dừng";
+        var timer = Stopwatch.StartNew();
+        SetStatus("Đang làm mới hàng loạt", "#F0E9F8", "#8868AA");
+
+        int finished = 0, ok = 0, failed = 0, limited = 0;
+        void ShowProgress() => ShowNotice($"Đang làm mới {finished}/{targets.Count} tài khoản · {workers} luồng" + (lanes[0] == null ? " (IP máy)" : " (proxy)") + "…");
+        ShowProgress();
+
+        var queue = new System.Collections.Concurrent.ConcurrentQueue<SavedAccount>(targets);
+        var silent = new Progress<string>(_ => { });
+
+        // Chạy trên luồng UI (await giữ SynchronizationContext) nên cập nhật UI an toàn; chỉ phần mạng là bất đồng bộ.
+        async Task Worker(string? proxyAddr)
+        {
+            while (!source.IsCancellationRequested && queue.TryDequeue(out var acc))
+            {
+                try
+                {
+                    var (result, newRefresh) = await RefreshAccountCoreAsync(acc, proxyAddr, silent, source.Token);
+                    CookieStore.UpdateStatus(acc.Id, "Hoạt động", result.AccessToken, proxyAddr, newRefresh);
+                    ok++;
+                }
+                catch (OperationCanceledException) when (source.IsCancellationRequested) { return; }
+                catch (Exception ex)
+                {
+                    var failure = SessionActivityLog.ClassifyFailure(ex);
+                    if (failure == ActivityFailure.AuthenticationRequired) CookieStore.UpdateStatus(acc.Id, "Hết hạn");
+                    if (failure == ActivityFailure.RateLimited) limited++;
+                    failed++;
+                }
+                finished++;
+                ShowProgress();
+            }
+        }
+
+        try
+        {
+            await Task.WhenAll(lanes.Take(workers).Select(Worker));
+        }
+        finally
+        {
+            bool canceled = source.IsCancellationRequested;
+            cancellation = null;
+            bulkRunning = false;
+            BulkRefreshButton.Content = "⚡ Làm mới";
+            SetBusy(false);
+            ReloadAccountsList(currentAccount?.Id);
+
+            if (ok > 0) AddLog(ActivityEvent.SessionRefreshed, ActivityLevel.Success, durationMs: timer.ElapsedMilliseconds, itemCount: ok);
+            if (failed > 0) AddLog(ActivityEvent.RefreshFailed, ActivityLevel.Error, limited > 0 ? ActivityFailure.RateLimited : ActivityFailure.Unexpected, itemCount: failed);
+            if (canceled) AddLog(ActivityEvent.ProcessingCanceled, ActivityLevel.Warning, ActivityFailure.Canceled);
+
+            string summary = $"{(canceled ? "Đã dừng" : "Xong")}: làm mới {ok}/{targets.Count} tài khoản";
+            if (failed > 0) summary += $" · {failed} lỗi";
+            if (limited > 0) summary += $" ({limited} bị giới hạn tạm thời (HTTP 429) — thử lại sau vài phút)";
+            SetStatus(failed == 0 ? "Thành công" : "Có lỗi", failed == 0 ? "#EDF4E8" : "#FFF1E5", failed == 0 ? "#6E8A61" : "#D35400");
+            ShowNotice(summary + ".", success: failed == 0 && !canceled, error: failed > 0);
+            if (closeAfterCancellation) Close();
+        }
+    }
+    #endregion
+
+    #region Import dialogs (cookie / refresh token)
+    private enum ImportMode { Cookie, RefreshToken }
+    private ImportMode importMode = ImportMode.Cookie;
+
+    private void OpenCookieImport_Click(object sender, RoutedEventArgs e) => ShowImport(ImportMode.Cookie);
+    private void OpenRefreshImport_Click(object sender, RoutedEventArgs e) => ShowImport(ImportMode.RefreshToken);
+
+    private void ShowImport(ImportMode mode)
+    {
+        if (busy || importingFiles) return;
+        importMode = mode;
+        bool cookie = mode == ImportMode.Cookie;
+        ImportTitle.Text = cookie ? "Nhập cookie" : "Nhập refresh token";
+        ImportDescription.Text = cookie
+            ? "Dán cookie đăng nhập Microsoft (Netscape .txt hoặc JSON) hoặc chọn file. App đổi sang mã NFA và thêm tài khoản. Cũng có thể kéo thả file vào cửa sổ."
+            : "Dán refresh token Microsoft, mỗi dòng một token. App đổi từng token sang mã NFA và thêm vào danh sách. Token phải lấy từ luồng đăng nhập Minecraft (cùng loại app này dùng).";
+        ImportWarning.Text = cookie
+            ? "Cookie là thông tin nhạy cảm: người giữ nó có thể lấy mã NFA mới bất cứ lúc nào. Chỉ nhập cookie của tài khoản bạn có quyền dùng."
+            : "Refresh token là thông tin nhạy cảm: người giữ nó có thể lấy mã NFA mới bất cứ lúc nào. Chỉ nhập token của tài khoản bạn có quyền dùng.";
+        ImportFileButton.Visibility = cookie ? Visibility.Visible : Visibility.Collapsed;
+        ImportInput.Clear();
+        ImportOverlay.Visibility = Visibility.Visible;
+        ImportInput.Focus();
+    }
+
+    private void ImportCancel_Click(object sender, RoutedEventArgs e)
+    {
+        ImportInput.Clear();
+        ImportOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    private void ImportPaste_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (Clipboard.ContainsText()) ImportInput.Text = Clipboard.GetText();
+        }
+        catch { ShowNotice("Clipboard đang bận.", error: true); }
+    }
+
+    private async void ImportApply_Click(object sender, RoutedEventArgs e)
+    {
+        string text = ImportInput.Text;
+        var mode = importMode;
+        ImportInput.Clear();
+        ImportOverlay.Visibility = Visibility.Collapsed;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            AddLog(ActivityEvent.InputRejected, ActivityLevel.Warning, ActivityFailure.InvalidInput);
+            ShowNotice(mode == ImportMode.Cookie ? "Chưa có cookie để nhập." : "Chưa có refresh token để nhập.", error: true);
+            return;
+        }
+
+        if (mode == ImportMode.Cookie)
+        {
+            await ProcessCookieTextAsync(text, "Cookie dán");
+            return;
+        }
+
+        var tokens = text
+            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(t => t.Trim())
+            .Where(t => t.Length >= 20 && !t.Contains(' ') && !t.Contains('\t'))
+            .Distinct(StringComparer.Ordinal)
+            .Take(200)
+            .ToList();
+        if (tokens.Count == 0)
+        {
+            AddLog(ActivityEvent.InputRejected, ActivityLevel.Warning, ActivityFailure.InvalidInput);
+            ShowNotice("Không thấy refresh token hợp lệ nào. Mỗi dòng một token, không chứa khoảng trắng.", error: true);
+            return;
+        }
+        await ImportRefreshTokensAsync(tokens);
+    }
+
+    private async void ImportChooseFile_Click(object sender, RoutedEventArgs e)
+    {
+        ImportInput.Clear();
+        ImportOverlay.Visibility = Visibility.Collapsed;
+        ChooseFile_Click(sender, e);
+        await Task.CompletedTask;
+    }
+
+    private async Task ImportRefreshTokensAsync(List<string> tokens)
+    {
+        if (busy || importingFiles) return;
+        using var source = new CancellationTokenSource();
+        cancellation = source;
+        SetBusy(true);
+        var timer = Stopwatch.StartNew();
+        SetStatus("Đang nhập refresh token", "#F0E9F8", "#8868AA");
+        var silent = new Progress<string>(_ => { });
+        int ok = 0, failed = 0, limited = 0;
+        string? lastId = null;
+        try
+        {
+            for (int i = 0; i < tokens.Count && !source.IsCancellationRequested; i++)
+            {
+                ShowNotice($"Đang nhập refresh token {i + 1}/{tokens.Count}…");
+                try
+                {
+                    string? proxyAddr = ProxyStore.GetNextRotatingProxy()?.Address;
+                    var ms = await MicrosoftAuthService.RefreshSessionAsync(tokens[i], silent, source.Token, proxyAddr);
+                    var s = ms.Session;
+                    var saved = CookieStore.Upsert(s.Username, s.FormattedUuid, "", s.AccessToken, "Refresh token", proxyAddr, ms.RefreshToken);
+                    lastId = saved.Id;
+                    ok++;
+                }
+                catch (OperationCanceledException) when (source.IsCancellationRequested) { break; }
+                catch (Exception ex)
+                {
+                    if (SessionActivityLog.ClassifyFailure(ex) == ActivityFailure.RateLimited) limited++;
+                    failed++;
+                }
+            }
+        }
+        finally
+        {
+            bool canceled = source.IsCancellationRequested;
+            cancellation = null;
+            SetBusy(false);
+            ReloadAccountsList(lastId ?? currentAccount?.Id);
+            if (ok > 0) AddLog(ActivityEvent.CookieSaved, ActivityLevel.Success, durationMs: timer.ElapsedMilliseconds, itemCount: ok);
+            if (failed > 0) AddLog(ActivityEvent.ProcessingFailed, ActivityLevel.Error, limited > 0 ? ActivityFailure.RateLimited : ActivityFailure.AuthenticationRequired, itemCount: failed);
+            if (canceled) AddLog(ActivityEvent.ProcessingCanceled, ActivityLevel.Warning, ActivityFailure.Canceled);
+
+            string summary = $"{(canceled ? "Đã dừng" : "Xong")}: thêm {ok}/{tokens.Count} tài khoản";
+            if (failed > 0) summary += $" · {failed} token lỗi (sai, hết hạn hoặc đã bị thu hồi)";
+            if (limited > 0) summary += $" · {limited} bị giới hạn tạm thời (HTTP 429), thử lại sau vài phút";
+            SetStatus(failed == 0 ? "Thành công" : "Có lỗi", failed == 0 ? "#EDF4E8" : "#FFF1E5", failed == 0 ? "#6E8A61" : "#D35400");
+            ShowNotice(summary + ".", success: failed == 0 && !canceled, error: failed > 0);
+            if (closeAfterCancellation) Close();
+        }
+    }
+    #endregion
+
+    #region Microsoft Login (device code)
+    private DeviceCodeInfo? loginCode;
+
+    private async void MicrosoftLogin_Click(object sender, RoutedEventArgs e)
+    {
+        if (busy || importingFiles) return;
+
+        using var source = new CancellationTokenSource();
+        cancellation = source;
+        SetBusy(true);
+        var operationTimer = Stopwatch.StartNew();
+        SetStatus("Đang đăng nhập Microsoft", "#F0E9F8", "#8868AA");
+        ShowNotice("Đang lấy mã đăng nhập Microsoft…");
+
+        LoginCodeText.Text = "••••••••";
+        LoginInstructionText.Text = "Đang lấy mã đăng nhập…";
+        LoginStatusText.Text = "Đang kết nối Microsoft…";
+        LoginCopyButton.IsEnabled = LoginOpenButton.IsEnabled = false;
+        LoginOverlay.Visibility = Visibility.Visible;
+
+        var progress = new Progress<string>(message =>
+        {
+            if (!busy || source.IsCancellationRequested) return;
+            LogProgress(message);
+        });
+
+        try
+        {
+            var proxy = ProxyStore.GetNextRotatingProxy();
+            string? proxyAddr = proxy?.Address;
+            if (!string.IsNullOrEmpty(proxyAddr)) AddLog(ActivityEvent.ProxySelected);
+
+            AddLog(ActivityEvent.MicrosoftConnecting);
+            var info = await MicrosoftAuthService.RequestDeviceCodeAsync(proxyAddr, source.Token);
+            loginCode = info;
+            LoginCodeText.Text = info.UserCode;
+            LoginInstructionText.Text = "Mở trang Microsoft, nhập mã bên dưới và đăng nhập bằng tài khoản Minecraft của bạn.";
+            LoginStatusText.Text = "Đang chờ bạn xác nhận trên trình duyệt…";
+            LoginCopyButton.IsEnabled = LoginOpenButton.IsEnabled = true;
+            TryCopy(info.UserCode);
+            OpenLoginPage();
+
+            var tokens = await MicrosoftAuthService.WaitForLoginAsync(info, proxyAddr, source.Token);
+            loginCode = null;
+            LoginInstructionText.Text = "Đã xác nhận. Đang lấy token Minecraft…";
+            LoginStatusText.Text = "Vui lòng đợi trong giây lát…";
+            LoginCopyButton.IsEnabled = LoginOpenButton.IsEnabled = false;
+
+            var result = await MicrosoftAuthService.ExchangeAsync(tokens.AccessToken, tokens.RefreshToken, progress, source.Token, proxyAddr);
+            var s = result.Session;
+            var saved = CookieStore.Upsert(s.Username, s.FormattedUuid, "", s.AccessToken, "Đăng nhập Microsoft", proxyAddr, result.RefreshToken);
+            ReloadAccountsList(saved.Id);
+
+            AddLog(ActivityEvent.CookieSaved, ActivityLevel.Success, durationMs: operationTimer.ElapsedMilliseconds);
+            SetStatus("Thành công", "#EDF4E8", "#6E8A61");
+            ShowNotice(TryCopy(s.AccessToken) ? "Đã thêm tài khoản và sao chép token." : "Đã thêm tài khoản.", success: true);
+        }
+        catch (OperationCanceledException) when (source.IsCancellationRequested)
+        {
+            SetStatus("Đã hủy", "#F2EDF8", "#8C799F");
+            AddLog(ActivityEvent.ProcessingCanceled, ActivityLevel.Warning, ActivityFailure.Canceled);
+            ShowNotice("Đã hủy đăng nhập Microsoft.");
+        }
+        catch (Exception ex)
+        {
+            string message = ex switch
+            {
+                InvalidDataException or MicrosoftRefreshRevokedException => ex.Message,
+                TimeoutException { Message: MicrosoftAuthService.DeviceCodeExpiredText } => ex.Message,
+                _ => FriendlyFailure(ex)
+            };
+            SetStatus("Lỗi đăng nhập", "#FBEAF0", "#B16A84");
+            LogError(ActivityEvent.ProcessingFailed, ex, operationTimer.ElapsedMilliseconds);
+            ShowNotice(message, error: true);
+        }
+        finally
+        {
+            loginCode = null;
+            LoginOverlay.Visibility = Visibility.Collapsed;
+            cancellation = null;
+            SetBusy(false);
+            if (closeAfterCancellation) Close();
+        }
+    }
+
+    private void OpenLoginPage()
+    {
+        if (loginCode == null || !MicrosoftAuthService.IsMicrosoftUri(loginCode.VerificationUriComplete)) return;
+        try { Process.Start(new ProcessStartInfo(loginCode.VerificationUriComplete) { UseShellExecute = true }); }
+        catch { LoginStatusText.Text = $"Không mở được trình duyệt. Hãy tự vào {loginCode.VerificationUri} và nhập mã."; }
+    }
+
+    private void OpenLoginPage_Click(object sender, RoutedEventArgs e) => OpenLoginPage();
+
+    private void CopyLoginCode_Click(object sender, RoutedEventArgs e)
+    {
+        if (loginCode != null && TryCopy(loginCode.UserCode)) LoginStatusText.Text = "Đã sao chép mã. Đang chờ bạn xác nhận…";
+    }
+
+    private void CancelLogin_Click(object sender, RoutedEventArgs e) => cancellation?.Cancel();
+    #endregion
 
     private async void DeleteCurrent_Click(object sender, RoutedEventArgs e)
     {
@@ -809,18 +1444,18 @@ public partial class MainWindow : Window
     #region Drop & File Dialog & Paste
     private void Window_DragOver(object sender, DragEventArgs e)
     {
-        e.Effects = !busy && !importingFiles && e.Data.GetDataPresent(DataFormats.FileDrop)
-            && e.Data.GetData(DataFormats.FileDrop) is string[] files && files.Length > 0 && files.All(File.Exists)
-            ? DragDropEffects.Copy : DragDropEffects.None;
-        DropZoneCard.BorderBrush = Brush(e.Effects == DragDropEffects.Copy ? "#A789C5" : "#DECDEE");
+        bool canDrop = !busy && !importingFiles && e.Data.GetDataPresent(DataFormats.FileDrop)
+            && e.Data.GetData(DataFormats.FileDrop) is string[] files && files.Length > 0 && files.All(File.Exists);
+        e.Effects = canDrop ? DragDropEffects.Copy : DragDropEffects.None;
+        DropOverlay.Visibility = canDrop ? Visibility.Visible : Visibility.Collapsed;
         e.Handled = true;
     }
 
-    private void Window_DragLeave(object sender, DragEventArgs e) => DropZoneCard.BorderBrush = Brush("#DECDEE");
+    private void Window_DragLeave(object sender, DragEventArgs e) => DropOverlay.Visibility = Visibility.Collapsed;
 
     private async void Window_Drop(object sender, DragEventArgs e)
     {
-        DropZoneCard.BorderBrush = Brush("#DECDEE");
+        DropOverlay.Visibility = Visibility.Collapsed;
         if (!busy && !importingFiles && e.Data.GetData(DataFormats.FileDrop) is string[] files)
         {
             await ImportFilesAsync(files);
@@ -841,34 +1476,6 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) == true)
         {
             await ImportFilesAsync(dialog.FileNames);
-        }
-    }
-
-    private async void PasteCookie_Click(object sender, RoutedEventArgs e)
-    {
-        if (busy || importingFiles) return;
-        try
-        {
-            if (Clipboard.ContainsText())
-            {
-                string text = Clipboard.GetText();
-                if (string.IsNullOrWhiteSpace(text))
-                {
-                    ShowNotice("Bộ nhớ tạm (Clipboard) không có văn bản.", error: true);
-                    return;
-                }
-                FileNameText.Text = "Nhập từ Clipboard";
-                FileHintText.Text = "Đang kiểm tra dữ liệu cookie vừa dán…";
-                await ProcessCookieTextAsync(text, "Clipboard");
-            }
-            else
-            {
-                ShowNotice("Bộ nhớ tạm (Clipboard) không chứa văn bản.", error: true);
-            }
-        }
-        catch (ExternalException)
-        {
-            ShowNotice("Không truy cập được Clipboard. Bạn thử lại nhé.", error: true);
         }
     }
 
@@ -983,7 +1590,7 @@ public partial class MainWindow : Window
 
     private void StarRepo_Click(object sender, RoutedEventArgs e)
     {
-        string targetUrl = "https://github.com/GauCandy/mc_session";
+        string targetUrl = "https://github.com/GauCandy/Minecraft_Acccout_Manager";
         try
         {
             Process.Start(new ProcessStartInfo(targetUrl) { UseShellExecute = true });
@@ -999,8 +1606,8 @@ public partial class MainWindow : Window
 
     private void CopyUsername_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrEmpty(UsernameField.Text) || UsernameField.Text == "Chưa chọn tài khoản") return;
-        bool copied = TryCopy(UsernameField.Text);
+        if (string.IsNullOrEmpty(ActiveAccountTitle.Text) || ActiveAccountTitle.Text == "Chưa chọn tài khoản") return;
+        bool copied = TryCopy(ActiveAccountTitle.Text);
         AddLog(copied ? ActivityEvent.UsernameCopied : ActivityEvent.ClipboardFailed, copied ? ActivityLevel.Success : ActivityLevel.Warning);
         ShowNotice(copied ? "Đã sao chép tên người chơi." : "Clipboard đang bận.", success: copied);
     }
@@ -1027,13 +1634,17 @@ public partial class MainWindow : Window
     {
         if (ProxyPoolBadge == null || ProxyPoolText == null || ProxyPoolIcon == null) return;
         int count = proxies.Count;
+        if (ProxyBenefitText != null)
+            ProxyBenefitText.Text = count > 0
+                ? $"Đang có {count} proxy: làm mới đa luồng, tối đa {count} tài khoản cùng lúc."
+                : "Chưa có proxy: app dùng IP máy và làm mới lần lượt từng tài khoản (đơn luồng).";
         if (count > 0)
         {
             ProxyPoolBadge.Background = Brush("#EDF7EE");
             ProxyPoolText.Text = $"{count} Proxy";
             ProxyPoolText.Foreground = Brush("#4E8C5C");
             ProxyPoolIcon.Text = "🛡️";
-            ProxyPoolBadge.ToolTip = $"Đang bật xoay vòng qua {count} proxy để lấy NFA, tránh bị gắn cờ spam IP.";
+            ProxyPoolBadge.ToolTip = $"{count} proxy: làm mới đa luồng, tối đa {count} tài khoản cùng lúc.";
         }
         else
         {
@@ -1041,7 +1652,7 @@ public partial class MainWindow : Window
             ProxyPoolText.Text = "IP máy";
             ProxyPoolText.Foreground = Brush("#85719B");
             ProxyPoolIcon.Text = "🌐";
-            ProxyPoolBadge.ToolTip = "Chưa có proxy nào. Ứng dụng sẽ dùng IP trực tiếp của máy bạn.";
+            ProxyPoolBadge.ToolTip = "Chưa có proxy: dùng IP máy, làm mới đơn luồng.";
         }
     }
 
@@ -1179,6 +1790,84 @@ public partial class MainWindow : Window
 
         card.Child = grid;
         return card;
+    }
+
+    private void OpenProxyAdd_Click(object sender, RoutedEventArgs e)
+    {
+        ProxyAddOverlay.Visibility = Visibility.Visible;
+        if (ProxyManualForm.Visibility == Visibility.Visible) ProxyHostInput.Focus();
+        else ProxyInputText.Focus();
+    }
+
+    private void CloseProxyAdd_Click(object sender, RoutedEventArgs e)
+    {
+        ProxyAddOverlay.Visibility = Visibility.Collapsed;
+        OpenProxyAddButton.Focus();
+    }
+
+    private void ProxyManualMode_Click(object sender, RoutedEventArgs e)
+    {
+        ProxyManualModeButton.Background = new SolidColorBrush(Color.FromRgb(220, 203, 239));
+        ProxyBulkModeButton.Background = new SolidColorBrush(Color.FromRgb(241, 235, 248));
+        ProxyManualForm.Visibility = Visibility.Visible;
+        ProxyBulkInput.Visibility = ProxyBulkActions.Visibility = Visibility.Collapsed;
+        ProxyHostInput.Focus();
+    }
+
+    private void ProxyBulkMode_Click(object sender, RoutedEventArgs e)
+    {
+        ProxyBulkModeButton.Background = new SolidColorBrush(Color.FromRgb(220, 203, 239));
+        ProxyManualModeButton.Background = new SolidColorBrush(Color.FromRgb(241, 235, 248));
+        ProxyManualForm.Visibility = Visibility.Collapsed;
+        ProxyBulkInput.Visibility = ProxyBulkActions.Visibility = Visibility.Visible;
+        ProxyInputText.Focus();
+    }
+
+    private void AddManualProxy_Click(object sender, RoutedEventArgs e)
+    {
+        var host = ProxyHostInput.Text.Trim().Trim('[', ']');
+        if (Uri.CheckHostName(host) == UriHostNameType.Unknown)
+        {
+            ShowNotice("Nhập địa chỉ IP hoặc tên miền, không kèm giao thức hay cổng.", error: true);
+            ProxyHostInput.Focus();
+            return;
+        }
+        if (!int.TryParse(ProxyPortInput.Text.Trim(), out var port) || port is < 1 or > 65535)
+        {
+            ShowNotice("Cổng phải là số từ 1 đến 65535.", error: true);
+            ProxyPortInput.Focus();
+            return;
+        }
+        var user = ProxyUserInput.Text;
+        var password = ProxyPasswordInput.Password;
+        if (user.Length == 0 && password.Length > 0)
+        {
+            ShowNotice("Vui lòng nhập tên đăng nhập khi dùng mật khẩu.", error: true);
+            ProxyUserInput.Focus();
+            return;
+        }
+        var scheme = ProxyHttp.IsChecked == true ? "http" : ProxyHttps.IsChecked == true ? "https" : "socks5";
+        var authority = host.Contains(':') ? $"[{host}]" : host;
+        var credentials = user.Length == 0 ? "" : $"{Uri.EscapeDataString(user)}:{Uri.EscapeDataString(password)}@";
+        var address = $"{scheme}://{credentials}{authority}:{port}";
+        if (ProxyStore.CreateWebProxy(address) == null)
+        {
+            ShowNotice("Thông tin proxy chưa hợp lệ. Kiểm tra lại các ô đã nhập.", error: true);
+            return;
+        }
+        var added = ProxyStore.AddFromText(address);
+        if (added == 0)
+        {
+            ShowNotice("Proxy đã tồn tại hoặc chưa lưu được. Thông tin đã nhập được giữ lại.", error: true);
+            return;
+        }
+        AddLog(ActivityEvent.ProxyAdded, ActivityLevel.Success, itemCount: added);
+        ProxyHostInput.Clear();
+        ProxyPortInput.Clear();
+        ProxyUserInput.Clear();
+        ProxyPasswordInput.Clear();
+        ReloadProxyList();
+        ShowNotice("Đã lưu proxy. Bấm kiểm tra để kiểm tra kết nối.", success: true);
     }
 
     private void AddProxies_Click(object sender, RoutedEventArgs e)
@@ -1324,7 +2013,12 @@ public partial class MainWindow : Window
         busy = value;
         WorkProgress.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
         WorkProgress.IsIndeterminate = value;
-        RefreshButton.IsEnabled = !value && currentAccount != null && !string.IsNullOrEmpty(currentAccount.RawCookies);
+        RefreshButton.IsEnabled = !value && currentAccount != null && currentAccount.CanRefresh;
+        AddAccountButton.IsEnabled = !value;
+        BulkRefreshButton.IsEnabled = !value || bulkRunning;
+        BulkCopyButton.IsEnabled = !value;
+        BulkTagButton.IsEnabled = !value;
+        SelectAllCheck.IsEnabled = !value;
         DeleteButton.IsEnabled = !value && currentAccount != null;
         ExportCookieButton.IsEnabled = !value && currentAccount != null && !string.IsNullOrEmpty(currentAccount.RawCookies);
     }
@@ -1339,7 +2033,7 @@ public partial class MainWindow : Window
         ActivityFailure.FileAccess => "Chưa truy cập được file. Bạn kiểm tra quyền thư mục rồi thử lại nhé.",
         ActivityFailure.ProxyAuthentication => "Proxy yêu cầu xác thực. Bạn kiểm tra tài khoản và mật khẩu proxy nhé.",
         ActivityFailure.ProxyBlocked => "Dịch vụ đích đang từ chối truy cập qua proxy này.",
-        ActivityFailure.RateLimited => "Dịch vụ đang giới hạn yêu cầu. Bạn thử lại sau nhé.",
+        ActivityFailure.RateLimited => "Microsoft đang tạm giới hạn yêu cầu (HTTP 429). Bạn chờ vài phút rồi thử lại nhé.",
         ActivityFailure.InvalidServiceResponse => "Dịch vụ trả về dữ liệu chưa hợp lệ. Bạn thử lại nhé.",
         ActivityFailure.Network or ActivityFailure.Dns or ActivityFailure.Connection or ActivityFailure.Tls or ActivityFailure.ProxyTunnel
             => "Chưa kết nối được dịch vụ. Bạn kiểm tra mạng, loại proxy và cổng kết nối nhé.",
@@ -1542,6 +2236,30 @@ public partial class MainWindow : Window
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (e.Key == Key.Escape && ProxyAddOverlay.Visibility == Visibility.Visible)
+        {
+            CloseProxyAdd_Click(sender, e);
+            e.Handled = true;
+            return;
+        }
+        if (e.Key == Key.Escape && ImportOverlay.Visibility == Visibility.Visible)
+        {
+            ImportCancel_Click(sender, e);
+            e.Handled = true;
+            return;
+        }
+        if (e.Key == Key.Escape && TagOverlay.Visibility == Visibility.Visible)
+        {
+            TagOverlay.Visibility = Visibility.Collapsed;
+            e.Handled = true;
+            return;
+        }
+        if (e.Key == Key.Escape && LoginOverlay.Visibility == Visibility.Visible)
+        {
+            cancellation?.Cancel();
+            e.Handled = true;
+            return;
+        }
         if (e.Key == Key.Escape && ConfirmationOverlay.Visibility == Visibility.Visible)
         {
             pendingConfirmation?.TrySetResult(false);
@@ -1571,33 +2289,15 @@ public partial class MainWindow : Window
         if (SidebarColumn == null || AccountsColumn == null || IdentityFields == null) return;
         var compact = e.NewSize.Width < 1000;
         SidebarColumn.Width = new GridLength(compact ? 164 : 200);
-        AccountsColumn.Width = new GridLength(compact ? 180 : 240);
-        var stackedFields = e.NewSize.Width < 1100;
-        if (IdentityFields.RowDefinitions.Count == 0)
-        {
-            IdentityFields.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            IdentityFields.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        }
-        var uuidGroup = (FrameworkElement)UuidField.Parent is Grid uuidGrid ? (FrameworkElement)uuidGrid.Parent : null;
-        if (uuidGroup != null)
-        {
-            Grid.SetRow(uuidGroup, stackedFields ? 1 : 0);
-            Grid.SetColumn(uuidGroup, stackedFields ? 0 : 2);
-            uuidGroup.Margin = stackedFields ? new Thickness(0, 10, 0, 0) : new Thickness(0);
-        }
-        IdentityFields.ColumnDefinitions[1].Width = new GridLength(stackedFields ? 0 : 12);
-        IdentityFields.ColumnDefinitions[2].Width = stackedFields ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
-        if (ProxyWorkspace != null)
-        {
-            ProxyWorkspace.ColumnDefinitions[0].Width = compact ? new GridLength(1, GridUnitType.Star) : new GridLength(280);
-            ProxyWorkspace.ColumnDefinitions[1].Width = new GridLength(compact ? 0 : 14);
-            ProxyWorkspace.ColumnDefinitions[2].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
-            ProxyWorkspace.RowDefinitions[0].Height = compact ? new GridLength(210) : new GridLength(1, GridUnitType.Star);
-            ProxyWorkspace.RowDefinitions[1].Height = compact ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
-            Grid.SetRow(ProxyListCard, compact ? 1 : 0);
-            Grid.SetColumn(ProxyListCard, compact ? 0 : 2);
-            ProxyListCard.Margin = compact ? new Thickness(0, 12, 0, 0) : new Thickness(0);
-        }
+        var narrow = e.NewSize.Width < 900;
+        AccountsColumn.MaxWidth = narrow ? double.PositiveInfinity : 440;
+        AccountsColumn.Width = narrow ? new GridLength(1, GridUnitType.Star) : new GridLength(compact ? 250 : 320);
+        AccountWorkspace.ColumnDefinitions[1].Width = narrow ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+        AccountWorkspace.RowDefinitions[1].Height = narrow ? new GridLength(1.3, GridUnitType.Star) : new GridLength(0);
+        Grid.SetRow(AccountDetailPane, narrow ? 1 : 0);
+        Grid.SetColumn(AccountDetailPane, narrow ? 0 : 1);
+
+
     }
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
     private void Maximize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;

@@ -15,7 +15,7 @@ internal sealed record UpdateDownloadProgress(long Received, long Total)
 
 internal static class AppUpdater
 {
-    internal const string ReleasesUrl = "https://github.com/GauCandy/mc_session/releases";
+    internal const string ReleasesUrl = "https://github.com/GauCandy/Minecraft_Acccout_Manager/releases";
     private const long MaxPackageSize = 1024L * 1024 * 1024;
     private static string TempRoot => Path.Combine(Path.GetTempPath(), "MinecraftCookieManager-updates");
 
@@ -30,7 +30,7 @@ internal static class AppUpdater
     internal static async Task<AppRelease?> CheckAsync(string currentVersion, CancellationToken token)
     {
         using var client = CreateClient();
-        var json = await client.GetStringAsync("https://api.github.com/repos/GauCandy/mc_session/releases/latest", token);
+        var json = await client.GetStringAsync("https://api.github.com/repos/GauCandy/Minecraft_Acccout_Manager/releases/latest", token);
         return ParseRelease(json, Version.Parse(currentVersion));
     }
 
@@ -49,7 +49,7 @@ internal static class AppUpdater
         if (root.TryGetProperty("assets", out var assets))
         {
             // Prefer the current product name, while supporting the original release filename.
-            foreach (var name in new[] { "MinecraftCookieManager.exe", "MinecraftSessionTool.exe" })
+            foreach (var name in new[] { "MinecraftAccountManager.exe", "MinecraftCookieManager.exe", "MinecraftSessionTool.exe" })
             {
                 foreach (var item in assets.EnumerateArray())
                 {

@@ -175,6 +175,8 @@ internal static class SessionService
         for (int i = 0; i < 8; i++)
         {
             using var response = await client.GetAsync(currentUrl, cancellationToken);
+            if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                throw new HttpRequestException("Rate limit (HTTP 429)", null, response.StatusCode);
             var loc = response.Headers.Location;
             if (loc == null) break;
 
@@ -253,7 +255,7 @@ internal static class SessionService
 
         if (!res.IsSuccessStatusCode)
         {
-            throw new Exception($"Đổi token Minecraft thất bại: HTTP {res.StatusCode}");
+            throw new HttpRequestException($"Đổi token Minecraft thất bại: HTTP {(int)res.StatusCode}", null, res.StatusCode);
         }
 
         using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync(cancellationToken));
@@ -276,6 +278,8 @@ internal static class SessionService
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
         using var res = await client.GetAsync("https://api.minecraftservices.com/minecraft/profile", cancellationToken);
+        if (res.StatusCode == HttpStatusCode.TooManyRequests)
+            throw new HttpRequestException("Rate limit (HTTP 429)", null, res.StatusCode);
         if (!res.IsSuccessStatusCode)
         {
             throw new Exception("Tài khoản Microsoft này chưa sở hữu bản quyền Minecraft Java.");

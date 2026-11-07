@@ -157,7 +157,7 @@ internal sealed class SessionActivityLog
     }
 
     private string Header() =>
-        "Minecraft Cookie Manager — Báo cáo hoạt động\n" +
+        "Minecraft Account Manager — Báo cáo hoạt động\n" +
         $"Phiên: {SessionId}\n" +
         $"Phiên bản app: {appVersion}\n" +
         $".NET: {Environment.Version}\n" +
@@ -203,6 +203,7 @@ internal sealed class SessionActivityLog
         if (exception is OperationCanceledException)
             return exception is TaskCanceledException ? ActivityFailure.Timeout : ActivityFailure.Canceled;
         if (exception is TimeoutException) return ActivityFailure.Timeout;
+        if (exception is MicrosoftRefreshRevokedException) return ActivityFailure.AuthenticationRequired;
         if (exception is HttpRequestException request)
         {
             if (request.StatusCode is { } status)

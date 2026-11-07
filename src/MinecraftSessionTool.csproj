@@ -8,8 +8,8 @@
     <Nullable>enable</Nullable>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <AssemblyName>MinecraftCookieManager</AssemblyName>
-    <Version>1.0.1</Version>
-    <Product>Minecraft Cookie Manager</Product>
+    <Version>1.0.2</Version>
+    <Product>Minecraft Account Manager</Product>
     <Description>A cozy desktop cookie and session manager for Minecraft.</Description>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>

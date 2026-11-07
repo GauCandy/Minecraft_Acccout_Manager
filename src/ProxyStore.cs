@@ -52,13 +52,19 @@ public static class ProxyStore
     private static readonly object StorageGate = new();
     private static int rotationIndex;
 
-    public static SavedProxy? GetNextRotatingProxy()
+    /// <summary>Các proxy dùng được để xoay vòng / chạy song song (bỏ proxy đang lỗi; nếu tất cả lỗi thì dùng hết).</summary>
+    public static List<SavedProxy> GetCandidates()
     {
         var list = LoadAll();
-        if (list.Count == 0) return null;
         var candidates = list.Where(p => !p.Status.StartsWith("Lỗi", StringComparison.OrdinalIgnoreCase)
             && p.FailureKind is ProxyCheckFailure.None or ProxyCheckFailure.Canceled).ToList();
-        if (candidates.Count == 0) candidates = list;
+        return candidates.Count == 0 ? list : candidates;
+    }
+
+    public static SavedProxy? GetNextRotatingProxy()
+    {
+        var candidates = GetCandidates();
+        if (candidates.Count == 0) return null;
         var index = (uint)Interlocked.Increment(ref rotationIndex) % (uint)candidates.Count;
         return candidates[(int)index];
     }
@@ -232,7 +238,7 @@ public static class ProxyStore
         ProxyCheckFailure.Timeout => "Kết nối mất quá nhiều thời gian. Proxy có thể tắt, chặn kết nối hoặc phản hồi chậm.",
         ProxyCheckFailure.AuthRequired => "Proxy yêu cầu xác thực. Kiểm tra tài khoản và mật khẩu của proxy.",
         ProxyCheckFailure.Blocked => "Đã kết nối nhưng dịch vụ từ chối truy cập qua proxy này (HTTP 403).",
-        ProxyCheckFailure.RateLimited => "Dịch vụ đang giới hạn số yêu cầu từ proxy này (HTTP 429). Thử lại sau.",
+        ProxyCheckFailure.RateLimited => "Rate limit (HTTP 429): dịch vụ đang giới hạn số yêu cầu từ IP của proxy này. Thử lại sau vài phút.",
         ProxyCheckFailure.RemoteError => "Proxy hoặc dịch vụ đích trả về lỗi HTTP. Kết nối được nhưng chưa xác nhận truy cập thành công.",
         ProxyCheckFailure.Dns => "Không phân giải được địa chỉ proxy. Kiểm tra tên máy chủ và kết nối mạng.",
         ProxyCheckFailure.Connection => "Không kết nối được proxy. Kiểm tra máy chủ, cổng và tình trạng hoạt động.",

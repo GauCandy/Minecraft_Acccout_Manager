@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace MinecraftSessionTool;
@@ -19,6 +20,13 @@ public class SavedAccount
     public string Status { get; set; } = "Hoạt động";
     public string SourceName { get; set; } = "";
     public string? LastProxyUsed { get; set; }
+    /// <summary>Refresh token Microsoft (khi thêm bằng "Đăng nhập Microsoft").</summary>
+    public string? RefreshToken { get; set; }
+    /// <summary>Nhãn phân loại tài khoản (dùng cho bộ lọc).</summary>
+    public List<string> Tags { get; set; } = new();
+
+    [JsonIgnore]
+    public bool CanRefresh => !string.IsNullOrEmpty(RefreshToken) || !string.IsNullOrEmpty(RawCookies);
 
     public string FormattedUuid => !string.IsNullOrEmpty(Uuid) && Uuid.Length == 32
         ? Regex.Replace(Uuid, @"(.{8})(.{4})(.{4})(.{4})(.{12})", "$1-$2-$3-$4-$5")
@@ -60,8 +68,15 @@ public static class CookieStore
 
     private static readonly string AccountsFile = Path.Combine(StorageDir, "accounts.json");
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+    // Làm mới song song nhiều tài khoản cùng ghi accounts.json — mọi read-modify-write phải qua khóa này.
+    private static readonly object Gate = new();
 
     public static List<SavedAccount> LoadAll()
+    {
+        lock (Gate) return LoadUnsafe();
+    }
+
+    private static List<SavedAccount> LoadUnsafe()
     {
         try
         {
@@ -78,6 +93,11 @@ public static class CookieStore
 
     public static void SaveAll(List<SavedAccount> accounts)
     {
+        lock (Gate) SaveUnsafe(accounts);
+    }
+
+    private static void SaveUnsafe(List<SavedAccount> accounts)
+    {
         try
         {
             Directory.CreateDirectory(StorageDir);
@@ -87,8 +107,10 @@ public static class CookieStore
         catch { }
     }
 
-    public static SavedAccount Upsert(string username, string uuid, string rawCookies, string accessToken, string sourceName, string? proxyUsed = null)
+    public static SavedAccount Upsert(string username, string uuid, string rawCookies, string accessToken, string sourceName, string? proxyUsed = null, string? refreshToken = null)
     {
+        lock (Gate)
+        {
         var list = LoadAll();
         var existing = list.FirstOrDefault(a =>
             (!string.IsNullOrEmpty(uuid) && a.Uuid.Equals(uuid, StringComparison.OrdinalIgnoreCase)) ||
@@ -99,7 +121,8 @@ public static class CookieStore
         {
             existing.Username = username;
             existing.Uuid = uuid;
-            existing.RawCookies = rawCookies;
+            if (!string.IsNullOrEmpty(rawCookies)) existing.RawCookies = rawCookies;
+            if (!string.IsNullOrEmpty(refreshToken)) existing.RefreshToken = refreshToken;
             existing.AccessToken = accessToken;
             existing.LastRefreshed = DateTime.UtcNow;
             existing.Status = "Hoạt động";
@@ -118,28 +141,64 @@ public static class CookieStore
             LastRefreshed = DateTime.UtcNow,
             Status = "Hoạt động",
             SourceName = sourceName,
-            LastProxyUsed = proxyUsed
+            LastProxyUsed = proxyUsed,
+            RefreshToken = refreshToken
         };
 
         list.Insert(0, newAcc);
         SaveAll(list);
         return newAcc;
+        }
     }
 
     public static void Delete(string id)
     {
-        var list = LoadAll();
-        list.RemoveAll(a => a.Id == id);
-        SaveAll(list);
+        lock (Gate)
+        {
+            var list = LoadAll();
+            list.RemoveAll(a => a.Id == id);
+            SaveAll(list);
+        }
     }
 
-    public static void UpdateStatus(string id, string status, string? newAccessToken = null, string? proxyUsed = null)
+    public static string? NormalizeTag(string? raw)
     {
+        var tag = (raw ?? "").Replace(",", " ").Replace(";", " ").Trim();
+        tag = string.Join(' ', tag.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        if (tag.Length == 0) return null;
+        return tag.Length > 24 ? tag[..24] : tag;
+    }
+
+    /// <summary>Thêm/gỡ tag cho nhiều tài khoản trong một lần ghi.</summary>
+    public static void UpdateTags(IEnumerable<string> ids, IEnumerable<string> add, IEnumerable<string> remove)
+    {
+        var idSet = new HashSet<string>(ids);
+        var toAdd = add.Select(NormalizeTag).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var toRemove = remove.Select(NormalizeTag).OfType<string>().ToList();
+        lock (Gate)
+        {
+            var list = LoadAll();
+            foreach (var acc in list.Where(a => idSet.Contains(a.Id)))
+            {
+                acc.Tags ??= new();
+                acc.Tags.RemoveAll(t => toRemove.Contains(t, StringComparer.OrdinalIgnoreCase));
+                foreach (var tag in toAdd)
+                    if (!acc.Tags.Contains(tag, StringComparer.OrdinalIgnoreCase)) acc.Tags.Add(tag);
+            }
+            SaveAll(list);
+        }
+    }
+
+    public static void UpdateStatus(string id, string status, string? newAccessToken = null, string? proxyUsed = null, string? newRefreshToken = null)
+    {
+        lock (Gate)
+        {
         var list = LoadAll();
         var item = list.FirstOrDefault(a => a.Id == id);
         if (item != null)
         {
             item.Status = status;
+            if (!string.IsNullOrEmpty(newRefreshToken)) item.RefreshToken = newRefreshToken;
             if (newAccessToken != null)
             {
                 item.AccessToken = newAccessToken;
@@ -147,6 +206,7 @@ public static class CookieStore
             }
             if (!string.IsNullOrEmpty(proxyUsed)) item.LastProxyUsed = proxyUsed;
             SaveAll(list);
+        }
         }
     }
 

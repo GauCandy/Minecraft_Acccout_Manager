@@ -1,8 +1,8 @@
-# Cập nhật Minecraft Cookie Manager
+# Cập nhật Minecraft Account Manager
 
 ## Người dùng
 
-Khi mở app, app kiểm tra bản phát hành mới trên GitHub GauCandy/mc_session. Nếu có phiên bản cao hơn, nút cập nhật màu cam hiện ở bên phải thanh tiêu đề. Bấm nút để xem nội dung thay đổi, sau đó chọn **Cập nhật và mở lại**.
+Khi mở app, app kiểm tra bản phát hành mới trên GitHub GauCandy/Minecraft_Acccout_Manager. Nếu có phiên bản cao hơn, nút cập nhật màu cam hiện ở bên phải thanh tiêu đề. Bấm nút để xem nội dung thay đổi, sau đó chọn **Cập nhật và mở lại**.
 
 App tải file .exe, kiểm tra dung lượng, SHA256 và phiên bản trong file, rồi thay bản đang chạy và mở lại. Cookie và proxy trong kho của người dùng không bị thay đổi. Bản .exe trước đó được giữ cạnh app với đuôi **.previous**; nếu quá trình thay file hoặc mở lại thất bại, app cố gắng mở lại bản cũ.
 
@@ -17,8 +17,8 @@ Nếu bản phát hành thiếu file hoặc thông tin kiểm tra phù hợp, ap
 
        dotnet publish .\src\MinecraftSessionTool.csproj -p:PublishProfile=Windows
 
-3. Tạo GitHub Release tại https://github.com/GauCandy/mc_session/releases với tag khớp phiên bản, ví dụ **v1.0.2**. Thêm ghi chú thay đổi để hiện trong app.
-4. Đính kèm **publish/MinecraftCookieManager.exe** vào mục Assets, rồi phát hành release ở trạng thái thông thường (không phải draft hoặc pre-release). Giữ đúng tên file. Tên cũ MinecraftSessionTool.exe cũng được hỗ trợ.
+3. Tạo GitHub Release tại https://github.com/GauCandy/Minecraft_Acccout_Manager/releases với tag khớp phiên bản, ví dụ **v1.0.2**. Thêm ghi chú thay đổi để hiện trong app.
+4. Đổi tên bản đóng gói từ `publish/MinecraftCookieManager.exe` thành **MinecraftAccountManager.exe**, rồi đính kèm vào mục Assets, rồi phát hành release ở trạng thái thông thường (không phải draft hoặc pre-release). Giữ đúng tên file. Tên cũ MinecraftSessionTool.exe cũng được hỗ trợ.
 5. Không tải nhầm file .exe trong src/bin: đó có thể là bản cần các file phụ. Dùng đúng file .exe chạy độc lập trong publish.
 
 GitHub cung cấp mã SHA256 cho asset sau khi tải lên. App dùng mã này và kiểm tra phiên bản bên trong file trước khi cài. Tag cao hơn nhưng file vẫn mang phiên bản cũ sẽ bị từ chối để tránh cập nhật sai.
