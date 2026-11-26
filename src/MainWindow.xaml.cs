@@ -45,6 +45,7 @@ public partial class MainWindow : Window
     private CancellationTokenSource? cancellation;
     private bool busy;
     private bool importingFiles;
+    private string? batchProgressPrefix;
     private bool closeAfterCancellation;
     private TaskCompletionSource<bool>? pendingConfirmation;
 
@@ -686,7 +687,8 @@ public partial class MainWindow : Window
             for (int index = 0; index < files.Length; index++)
             {
                 if (closeAfterCancellation) break;
-                ShowNotice($"Đang nhập file {index + 1}/{files.Length}…");
+                batchProgressPrefix = files.Length > 1 ? $"[{index + 1}/{files.Length}] " : null;
+                ShowNotice($"{batchProgressPrefix}Đang nhập file…");
                 bool success = await ImportFileAsync(files[index]);
                 if (success) passed++; else failed++;
                 AddImportResult(Path.GetFileName(files[index]), success, success ? "Đã thêm tài khoản" : NoticeText.Text);
@@ -746,12 +748,17 @@ public partial class MainWindow : Window
         SetBusy(true);
         var operationTimer = Stopwatch.StartNew();
         SetStatus("Đang xử lý cookie", "#F0E9F8", "#8868AA");
-        ShowNotice("Đang đăng nhập Microsoft & xác thực Minecraft…");
+        ShowNotice($"{batchProgressPrefix}Đang đăng nhập Microsoft & xác thực Minecraft…");
 
         var progress = new Progress<string>(message =>
         {
             if (!busy || source.IsCancellationRequested) return;
             LogProgress(message);
+            bool isRateLimit = message.Contains("429", StringComparison.Ordinal) || message.Contains("rate limit", StringComparison.OrdinalIgnoreCase);
+            if (isRateLimit || !string.IsNullOrEmpty(batchProgressPrefix))
+            {
+                ShowNotice($"{batchProgressPrefix}{message}", error: isRateLimit);
+            }
         });
 
         try
@@ -818,6 +825,11 @@ public partial class MainWindow : Window
         {
             if (!busy || source.IsCancellationRequested) return;
             LogProgress(message);
+            bool isRateLimit = message.Contains("429", StringComparison.Ordinal) || message.Contains("rate limit", StringComparison.OrdinalIgnoreCase);
+            if (isRateLimit || !string.IsNullOrEmpty(batchProgressPrefix))
+            {
+                ShowNotice($"{batchProgressPrefix}{message}", error: isRateLimit);
+            }
         });
 
         try
@@ -1346,6 +1358,11 @@ public partial class MainWindow : Window
         {
             if (!busy || source.IsCancellationRequested) return;
             LogProgress(message);
+            bool isRateLimit = message.Contains("429", StringComparison.Ordinal) || message.Contains("rate limit", StringComparison.OrdinalIgnoreCase);
+            if (isRateLimit || !string.IsNullOrEmpty(batchProgressPrefix))
+            {
+                ShowNotice($"{batchProgressPrefix}{message}", error: isRateLimit);
+            }
         });
 
         try
@@ -2033,7 +2050,7 @@ public partial class MainWindow : Window
         ActivityFailure.FileAccess => "Chưa truy cập được file. Bạn kiểm tra quyền thư mục rồi thử lại nhé.",
         ActivityFailure.ProxyAuthentication => "Proxy yêu cầu xác thực. Bạn kiểm tra tài khoản và mật khẩu proxy nhé.",
         ActivityFailure.ProxyBlocked => "Dịch vụ đích đang từ chối truy cập qua proxy này.",
-        ActivityFailure.RateLimited => "Microsoft đang tạm giới hạn yêu cầu (HTTP 429). Bạn chờ vài phút rồi thử lại nhé.",
+        ActivityFailure.RateLimited => "IP hiện tại đang bị rate limit (HTTP 429). Bạn chờ vài phút hoặc đổi IP/Proxy rồi thử lại nhé.",
         ActivityFailure.InvalidServiceResponse => "Dịch vụ trả về dữ liệu chưa hợp lệ. Bạn thử lại nhé.",
         ActivityFailure.Network or ActivityFailure.Dns or ActivityFailure.Connection or ActivityFailure.Tls or ActivityFailure.ProxyTunnel
             => "Chưa kết nối được dịch vụ. Bạn kiểm tra mạng, loại proxy và cổng kết nối nhé.",

@@ -392,7 +392,7 @@
                       <MenuItem Style="{StaticResource AccountMenuItem}" Header="🔑   Đăng nhập Microsoft" Click="MicrosoftLogin_Click" ToolTip="Nhập mã trên trang Microsoft — không cần cookie" />
                       <Separator />
                       <MenuItem Style="{StaticResource AccountMenuItem}" Header="🍪   Nhập cookie…" Click="OpenCookieImport_Click" ToolTip="Dán cookie hoặc chọn file (.txt / .json / .cookies)" />
-                      <MenuItem Style="{StaticResource AccountMenuItem}" Header="🔁   Nhập refresh token…" Click="OpenRefreshImport_Click" ToolTip="Dán refresh token Microsoft (mỗi dòng một token)" />
+                      <MenuItem Style="{StaticResource AccountMenuItem}" Header="🔁   Nhập refresh token…" Click="OpenRefreshImport_Click" ToolTip="Dán refresh token Microsoft (mỗi dòng một token)" Visibility="Collapsed" />
                     </ContextMenu>
                   </Button.ContextMenu>
                 </Button>
@@ -474,7 +474,7 @@
                     <TextBlock Text="Thêm tài khoản Minecraft vào app, rồi chỉ gửi mã NFA cho người mượn. Mã tự hết hạn và không đổi được mật khẩu Microsoft." FontSize="12" Foreground="#8C7D9E" TextAlignment="Center" LineHeight="19" Margin="0,8,0,22" />
                     <Button Content="🔑   Đăng nhập Microsoft" Click="MicrosoftLogin_Click" Style="{StaticResource PrimaryButton}" Padding="16,10" Margin="0,0,0,8" />
                     <Button Content="🍪   Nhập cookie" Click="OpenCookieImport_Click" Padding="16,10" Margin="0,0,0,8" />
-                    <Button Content="🔁   Nhập refresh token" Click="OpenRefreshImport_Click" Padding="16,10" />
+                    <Button Content="🔁   Nhập refresh token" Click="OpenRefreshImport_Click" Padding="16,10" Visibility="Collapsed" />
                   </StackPanel>
                 </Border>
                 <!-- Detail content -->

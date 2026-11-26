@@ -33,24 +33,38 @@ internal static class SessionService
     {
         var jar = ParseCookiesFromText(cookieText);
         if (jar.Count == 0)
-            throw new InvalidDataException("Dữ liệu chưa có cookie đăng nhập Microsoft hợp lệ (hỗ trợ cả định dạng Netscape .txt và JSON .json). Hãy kiểm tra lại file cookie nhé.");
+            throw new InvalidDataException("Dữ liệu chưa có cookie đăng nhập Microsoft hợp lệ (hỗ trợ Netscape .txt, JSON .json và chuỗi Cookie dạng name=value). Hãy kiểm tra lại file cookie nhé.");
 
-        cancellationToken.ThrowIfCancellationRequested();
         if (!string.IsNullOrEmpty(proxyAddress))
         {
             progress.Report($"Định tuyến qua Proxy: {proxyAddress}");
         }
-        progress.Report("Kết nối Microsoft OAuth");
-        var callback = await ResolveSisuOAuthAsync(jar, cancellationToken, proxyAddress);
-        progress.Report("Xác nhận phiên Xbox");
-        var (userHash, xstsToken) = ExtractXstsBundle(callback);
-        progress.Report("Lấy phiên Minecraft Java");
-        var accessToken = await ExchangeMinecraftTokenAsync(userHash, xstsToken, cancellationToken, proxyAddress);
-        progress.Report("Đọc hồ sơ người chơi");
-        var (username, uuid) = await GetMinecraftProfileAsync(accessToken, cancellationToken, proxyAddress);
-        cancellationToken.ThrowIfCancellationRequested();
 
-        return new SessionResult(username, uuid, accessToken);
+        int[] retryDelaysSeconds = [10, 20, 35];
+        for (int attempt = 0; ; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                progress.Report("Kết nối Microsoft OAuth");
+                var callback = await ResolveSisuOAuthAsync(jar, cancellationToken, proxyAddress);
+                progress.Report("Xác nhận phiên Xbox");
+                var (userHash, xstsToken) = ExtractXstsBundle(callback);
+                progress.Report("Lấy phiên Minecraft Java");
+                var accessToken = await ExchangeMinecraftTokenAsync(userHash, xstsToken, cancellationToken, proxyAddress);
+                progress.Report("Đọc hồ sơ người chơi");
+                var (username, uuid) = await GetMinecraftProfileAsync(accessToken, cancellationToken, proxyAddress);
+                cancellationToken.ThrowIfCancellationRequested();
+
+                return new SessionResult(username, uuid, accessToken);
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests && attempt < retryDelaysSeconds.Length)
+            {
+                int delay = retryDelaysSeconds[attempt];
+                progress.Report($"IP bị rate limit (HTTP 429) — chờ {delay}s rồi thử lại ({attempt + 1}/{retryDelaysSeconds.Length})...");
+                await Task.Delay(TimeSpan.FromSeconds(delay), cancellationToken);
+            }
+        }
     }
 
     private static readonly HashSet<string> AuthDomains = new(StringComparer.OrdinalIgnoreCase)
@@ -144,6 +158,34 @@ internal static class SessionService
                 catch { }
             }
         }
+
+        // 3. Định dạng chuỗi Cookie thô (name=value hoặc name1=val1; name2=val2, ví dụ __Host-MSAAUTHP=...)
+        if (container.Count == 0)
+        {
+            string raw = trimmed;
+            if (raw.StartsWith("Cookie:", StringComparison.OrdinalIgnoreCase))
+                raw = raw.Substring(7).Trim();
+
+            var pairs = raw.Split(new[] { ';', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var pair in pairs)
+            {
+                string item = pair.Trim();
+                int eq = item.IndexOf('=');
+                if (eq <= 0) continue;
+
+                string name = item.Substring(0, eq).Trim();
+                string val = item.Substring(eq + 1).Trim();
+                if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(val) || name.Any(char.IsWhiteSpace))
+                    continue;
+
+                try
+                {
+                    container.Add(new Cookie(name, val, "/", "login.live.com"));
+                }
+                catch { }
+            }
+        }
+
         return container;
     }
 

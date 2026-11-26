@@ -20,6 +20,7 @@ internal static class Program
             else if (!args[i].StartsWith("-") && initialFile == null)
                 initialFile = args[i];
         }
+        System.Windows.Media.RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
         var app = new Application { ShutdownMode = ShutdownMode.OnMainWindowClose };
         var window = new MainWindow(initialFile);
         app.DispatcherUnhandledException += (_, e) => window.RecordUnhandledException(e.Exception);

@@ -21,3 +21,5 @@ proxies.json
 *.token
 *.log
 backup*/
+
+.checks/
